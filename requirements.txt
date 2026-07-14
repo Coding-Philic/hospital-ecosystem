@@ -1,0 +1,30 @@
+# ============================================
+# MediFlow AI — Python Dependencies
+# ============================================
+
+# Frontend
+streamlit>=1.38.0
+streamlit-cookies-controller>=0.0.4
+
+# Database
+supabase>=2.9.0
+
+# AI / LLM
+groq>=0.11.0
+langchain>=0.3.0
+langchain-groq>=0.2.0
+langgraph>=0.2.0
+langchain-core>=0.3.0
+
+# Data Validation
+pydantic>=2.9.0
+
+# Environment Management
+python-dotenv>=1.0.0
+
+# Visualization
+plotly>=5.24.0
+
+# Utilities
+Pillow>=10.4.0
+python-dateutil>=2.9.0

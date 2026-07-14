@@ -1,0 +1,51 @@
+# Virtual environments
+venv/
+env/
+.env/
+.venv/
+
+# Environment variables (CRITICAL)
+.env
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs and databases
+*.log
+*.sqlite
+*.sqlite3
+*.db
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+.project
+.settings/
+
+# Streamlit specific
+.streamlit/credentials.toml
+
+# pytest / coverage
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Build directories
+build/
+dist/
+*.egg-info/
