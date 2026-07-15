@@ -1,5 +1,5 @@
 """
-MediFlow AI — 🏥 Patient Portal
+MediFlow AI — Patient Portal
 =================================
 Patient-facing dashboard for:
 - Symptom submission with AI analysis
@@ -43,7 +43,7 @@ active_tab = st.session_state.get("active_tab", "New Visit")
 # ══════════════════════════════════════════════════════════════
 if active_tab == "New Visit":
     if not patient:
-        st.warning("⚠️ Please complete your intake form first before booking a visit.")
+        st.warning("Please complete your intake form first before booking a visit.")
         render_intake_form()
     else:
         # Launch the interactive, multi-modal intake chat
@@ -54,7 +54,7 @@ if active_tab == "New Visit":
 # TAB 2: Queue Status
 # ══════════════════════════════════════════════════════════════
 elif active_tab == "My Queue":
-    st.markdown("### My Active Queue Tokens")
+    st.markdown("### Active Queue Tokens")
 
     if not patient:
         st.info("Complete your intake form to start booking appointments.")
@@ -87,7 +87,7 @@ elif active_tab == "My Queue":
                     except Exception:
                         pass
             else:
-                st.info("No active queue tokens. Start a new visit to get one!")
+                st.info("No active queue tokens. Start a new visit to get one.")
         except Exception as e:
             st.error(f"Error loading queue: {e}")
 
@@ -107,7 +107,7 @@ elif active_tab == "Prescriptions":
                 for rx in prescriptions:
                     render_prescription_view(rx)
             else:
-                st.info("No prescriptions yet. They'll appear here after your consultation.")
+                st.info("No prescriptions yet. They will appear here after your consultation.")
         except Exception as e:
             st.error(f"Error loading prescriptions: {e}")
 

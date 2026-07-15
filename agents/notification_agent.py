@@ -86,7 +86,7 @@ def notify_consultation_ready(patient_user_id: str, doctor_name: str, room: str 
     return notify_user(
         user_id=patient_user_id,
         notification_type="consultation_ready",
-        title="🩺 Your Turn!",
+        title="Your Turn!",
         message=msg,
     )
 
@@ -96,7 +96,7 @@ def notify_prescription_ready(patient_user_id: str, prescription_code: str) -> d
     return notify_user(
         user_id=patient_user_id,
         notification_type="prescription_ready",
-        title="📝 Prescription Ready",
+        title="Prescription Ready",
         message=f"Your prescription ({prescription_code}) has been created and sent to the pharmacy.",
         metadata={"prescription_code": prescription_code},
     )
@@ -107,7 +107,7 @@ def notify_pharmacy_ready(patient_user_id: str, prescription_code: str) -> dict:
     return notify_user(
         user_id=patient_user_id,
         notification_type="pharmacy_ready",
-        title="💊 Medicines Ready!",
+        title="Medicines Ready!",
         message=f"Your medicines for prescription {prescription_code} are ready for pickup at the pharmacy.",
         metadata={"prescription_code": prescription_code},
     )

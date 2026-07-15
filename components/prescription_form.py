@@ -19,7 +19,7 @@ def render_prescription_form(consultation_id: str, patient_id: str, doctor_id: s
         doctor_id: The prescribing doctor
         on_submit: Callback with prescription items on submission
     """
-    st.markdown("#### 📝 Write Prescription")
+    st.markdown("#### Write Prescription")
 
     # Initialize prescription items in session state
     if "prescription_items" not in st.session_state:
@@ -33,7 +33,7 @@ def render_prescription_form(consultation_id: str, patient_id: str, doctor_id: s
         medicine_names = []
 
     # Add medicine item form
-    with st.expander("➕ Add Medicine", expanded=True):
+    with st.expander("Add Medicine", expanded=True):
         col1, col2 = st.columns(2)
         with col1:
             if medicine_names:
@@ -61,7 +61,7 @@ def render_prescription_form(consultation_id: str, patient_id: str, doctor_id: s
             quantity = st.number_input("Quantity (tablets/units)", min_value=1, value=10, key="rx_quantity")
             instructions = st.text_input("Special Instructions", placeholder="e.g., Take after meals", key="rx_instructions")
 
-        if st.button("➕ Add to Prescription", use_container_width=True):
+        if st.button("Add to Prescription", use_container_width=True):
             if medicine_name and medicine_name != "-- Select or type --" and dosage:
                 item = {
                     "medicine_name": medicine_name,
@@ -73,14 +73,14 @@ def render_prescription_form(consultation_id: str, patient_id: str, doctor_id: s
                     "instructions": instructions,
                 }
                 st.session_state.prescription_items.append(item)
-                st.success(f"✅ Added: {medicine_name} {dosage}")
+                st.success(f"Added: {medicine_name} {dosage}")
                 st.rerun()
             else:
                 st.warning("Please fill in medicine name and dosage.")
 
     # Display current items
     if st.session_state.prescription_items:
-        st.markdown("#### 📋 Current Prescription Items")
+        st.markdown("#### Current Prescription Items")
 
         for idx, item in enumerate(st.session_state.prescription_items):
             col1, col2, col3 = st.columns([4, 4, 1])
@@ -93,23 +93,23 @@ def render_prescription_form(consultation_id: str, patient_id: str, doctor_id: s
                 {item['frequency']} | {item['duration']} | {item['route']}
                 """)
             with col3:
-                if st.button("🗑️", key=f"remove_rx_{idx}"):
+                if st.button("Remove", key=f"remove_rx_{idx}"):
                     st.session_state.prescription_items.pop(idx)
                     st.rerun()
 
             if item.get("instructions"):
-                st.caption(f"   📌 {item['instructions']}")
+                st.caption(f"   Note: {item['instructions']}")
             st.markdown("---")
 
         # Submit prescription
         col_submit, col_clear = st.columns(2)
         with col_submit:
-            if st.button("✅ Submit Prescription", use_container_width=True, type="primary"):
+            if st.button("Submit Prescription", use_container_width=True, type="primary"):
                 if on_submit:
                     on_submit(st.session_state.prescription_items)
                 st.session_state.prescription_items = []
         with col_clear:
-            if st.button("🗑️ Clear All", use_container_width=True):
+            if st.button("Clear All", use_container_width=True):
                 st.session_state.prescription_items = []
                 st.rerun()
     else:
@@ -136,31 +136,32 @@ def render_prescription_view(prescription: dict):
 
     st.markdown(f"""
     <div style="
-        background: linear-gradient(135deg, #1e293b, #0f172a);
-        border: 1px solid #475569;
-        border-radius: 12px;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-left: 3px solid {status_color};
+        border-radius: 6px;
         padding: 1.2rem;
         margin-bottom: 1rem;
     ">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
             <div>
-                <span style="color: #94a3b8; font-size: 0.8rem;">Prescription</span><br/>
-                <span style="color: white; font-weight: 700; font-size: 1.1rem;">
+                <span style="color: var(--text-secondary); font-size: 0.8rem;">Prescription</span><br/>
+                <span style="color: var(--text-primary); font-weight: 700; font-size: 1.1rem;">
                     {prescription.get('prescription_code', 'N/A')}
                 </span>
             </div>
             <div style="
-                background: {status_color}20;
+                background: {status_color}18;
                 color: {status_color};
                 padding: 4px 14px;
-                border-radius: 20px;
+                border-radius: 4px;
                 font-weight: 600;
-                font-size: 0.85rem;
+                font-size: 0.8rem;
             ">
                 {status.replace('_', ' ').title()}
             </div>
         </div>
-        <div style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 0.5rem;">
+        <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.5rem;">
             Prescribed by: Dr. {doc_user.get('full_name', 'Unknown')}
         </div>
     </div>
@@ -169,12 +170,12 @@ def render_prescription_view(prescription: dict):
     if items:
         for item in items:
             in_stock = item.get("is_in_stock")
-            stock_icon = "✅" if in_stock else ("❌" if in_stock is False else "❓")
+            stock_label = "In Stock" if in_stock else ("Out of Stock" if in_stock is False else "Unknown")
 
             st.markdown(f"""
-            💊 **{item.get('medicine_name', 'N/A')}** — {item.get('dosage', '')}
+            **{item.get('medicine_name', 'N/A')}** — {item.get('dosage', '')}
             - Frequency: {item.get('frequency', '')} | Duration: {item.get('duration', '')}
-            - Route: {item.get('route', 'Oral')} | Qty: {item.get('quantity', 1)} | Stock: {stock_icon}
+            - Route: {item.get('route', 'Oral')} | Qty: {item.get('quantity', 1)} | Stock: {stock_label}
             """)
             if item.get("instructions"):
-                st.caption(f"   📌 {item['instructions']}")
+                st.caption(f"   Note: {item['instructions']}")

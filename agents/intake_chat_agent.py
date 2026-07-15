@@ -22,6 +22,11 @@ SYSTEM_PROMPT = """You are MediFlow AI's Medical Triage Nurse.
 Your goal is to understand the patient's symptoms by asking clarifying cross-questions (e.g., onset, duration, severity, location).
 You MUST be empathetic, concise, and professional.
 
+IMPORTANT LANGUAGE RULES: 
+- You MUST detect the language the user is speaking (e.g., English, Hindi, or Hinglish) and reply in the EXACT SAME language.
+- If the user speaks English, reply in English. If they speak Hindi, reply in Hindi. If they speak Hinglish, reply in Hinglish.
+- By default, assume a bilingual English/Hindi context.
+
 If the patient uploads an image, analyze the image to help determine the condition and ask relevant questions based on what you see.
 
 Keep asking one question at a time until you have a clear picture of their issue.
@@ -46,7 +51,6 @@ def transcribe_audio(audio_bytes: bytes) -> str:
     """Transcribe audio bytes using Groq Whisper."""
     try:
         client = get_raw_groq_client()
-        # Groq's whisper model expects a tuple (filename, file_content)
         file = ("audio.wav", audio_bytes)
         transcription = client.audio.transcriptions.create(
             file=file,
@@ -59,30 +63,28 @@ def transcribe_audio(audio_bytes: bytes) -> str:
         return f"[Audio transcription failed: {e}]"
 
 
-def run_intake_chat(conversation_history: list, latest_image_base64: str = None) -> dict:
+def run_intake_chat_stream(conversation_history: list, latest_image_base64: str = None, is_voice_mode: bool = False, patient_history: str = None):
     """
-    Runs the intake chat.
-    conversation_history: List of dicts [{"role": "user"|"assistant", "content": "text"}]
-    Returns a dict with:
-      - is_complete: bool
-      - response_text: str (the next question or the final report)
-      - final_data: dict (if complete, contains the JSON data)
+    Generator that yields the AI's response chunks.
+    Automatically strips out <think>...</think> blocks.
     """
     client = get_raw_groq_client()
     
-    # We will use qwen3.6-27b for both text and vision
-    model_name = "qwen/qwen3.6-27b"
-
+    if is_voice_mode:
+        model_name = "llama-3.3-70b-versatile"
+    else:
+        model_name = "qwen/qwen3.6-27b"
+        
     system_message = SYSTEM_PROMPT.format(
         departments=", ".join(config.DEPARTMENTS)
     )
+    
+    if patient_history:
+        system_message += f"\n\nPATIENT PAST MEDICAL HISTORY:\n{patient_history}\n(Use this context to inform your questions and understand their background, but focus on the CURRENT issue they report.)"
 
-    # Build the Groq messages array
     groq_messages = [{"role": "system", "content": system_message}]
 
-    # Append history
     for msg in conversation_history:
-        # If the last user message has an image, format it accordingly
         if msg == conversation_history[-1] and msg["role"] == "user" and latest_image_base64:
             groq_messages.append({
                 "role": "user",
@@ -100,44 +102,68 @@ def run_intake_chat(conversation_history: list, latest_image_base64: str = None)
             groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
     try:
-        completion = client.chat.completions.create(
+        stream = client.chat.completions.create(
             model=model_name,
             messages=groq_messages,
             temperature=0.3,
+            stream=True
         )
         
-        ai_response = completion.choices[0].message.content.strip()
+        in_think_block = False
+        buffer = ""
+        
+        for chunk in stream:
+            content = chunk.choices[0].delta.content
+            if content:
+                buffer += content
+                
+                if not in_think_block:
+                    if "<think>" in buffer:
+                        parts = buffer.split("<think>", 1)
+                        if parts[0]:
+                            yield parts[0]
+                        buffer = "<think>" + parts[1]
+                        in_think_block = True
+                    else:
+                        if len(buffer) > 7:
+                            yield buffer[:-7]
+                            buffer = buffer[-7:]
+                
+                if in_think_block:
+                    if "</think>" in buffer:
+                        parts = buffer.split("</think>", 1)
+                        buffer = parts[1]
+                        in_think_block = False
 
-        # Check if AI outputted the completion JSON
-        # We look for ```json ... ``` or just { "status": "complete" }
-        text_to_parse = ai_response
-        if "```json" in ai_response:
-            text_to_parse = ai_response.split("```json")[1].split("```")[0].strip()
-        elif "```" in ai_response:
-            text_to_parse = ai_response.split("```")[1].split("```")[0].strip()
-            
-        if text_to_parse.startswith("{") and "complete" in text_to_parse:
-            try:
-                final_data = json.loads(text_to_parse)
-                if final_data.get("status") == "complete":
-                    return {
-                        "is_complete": True,
-                        "response_text": "Intake complete.",
-                        "final_data": final_data
-                    }
-            except json.JSONDecodeError:
-                pass # Fallback to standard chat response if parsing fails
-
-        return {
-            "is_complete": False,
-            "response_text": ai_response,
-            "final_data": None
-        }
+        if buffer and not in_think_block:
+            yield buffer
 
     except Exception as e:
         logger.error(f"Groq chat error: {e}")
-        return {
-            "is_complete": False,
-            "response_text": "I'm having trouble connecting to the medical network right now. Could you repeat that?",
-            "final_data": None
-        }
+        yield "मुझे क्षमा करें, मुझे अभी नेटवर्क से कनेक्ट करने में परेशानी हो रही है। क्या आप दोहरा सकते हैं? (I'm having trouble connecting right now. Could you repeat that?)"
+
+def parse_intake_completion(ai_response: str) -> dict:
+    """Parses the final completed response to see if intake is complete."""
+    import re
+    text_to_parse = ai_response.strip()
+    if "```json" in ai_response:
+        text_to_parse = ai_response.split("```json")[1].split("```")[0].strip()
+    elif "```" in ai_response:
+        text_to_parse = ai_response.split("```")[1].split("```")[0].strip()
+        
+    if text_to_parse.startswith("{") and "complete" in text_to_parse:
+        try:
+            import json
+            final_data = json.loads(text_to_parse)
+            if final_data.get("status") == "complete":
+                return {
+                    "is_complete": True,
+                    "final_data": final_data
+                }
+        except Exception:
+            pass
+
+    return {
+        "is_complete": False,
+        "final_data": None
+    }

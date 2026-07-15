@@ -35,30 +35,46 @@ def _render_landing_page():
         </div>
     """, unsafe_allow_html=True)
 
-    # Hero Section
+    # Hero Section — clean text-based, no external images
     st.markdown("""
-    <div style="padding: 3rem 0 2rem 0; text-align: center;">
-        <div style="color: var(--accent); font-size: 3.5rem; font-weight: 800; margin-bottom: 0.5rem; line-height: 1.2;">Streamlining Healthcare,<br>Empowering Lives</div>
-        <div style="color: var(--text-secondary); font-size: 1.2rem; margin-bottom: 2rem;">The complete AI-powered operating system for modern hospitals.</div>
+    <div style="padding: 4rem 0 2rem 0; text-align: center;">
+        <div style="color: var(--accent); font-size: 3.2rem; font-weight: 800; margin-bottom: 0.5rem; line-height: 1.2; letter-spacing: -0.02em;">
+            Streamlining Healthcare,<br>Empowering Lives
+        </div>
+        <div style="color: var(--text-secondary); font-size: 1.15rem; margin-bottom: 1rem; max-width: 600px; margin-left: auto; margin-right: auto;">
+            The complete AI-powered operating system for modern hospitals.
+            From patient intake to pharmacy dispensing — one seamless workflow.
+        </div>
+        <div style="width: 60px; height: 3px; background: #007B8A; margin: 2rem auto;"></div>
     </div>
     """, unsafe_allow_html=True)
-    
-    st.image("https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=2053&auto=format&fit=crop", use_container_width=True)
 
     # Trust Metrics
-    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
     m1, m2, m3, m4 = st.columns(4)
     with m1:
-        st.markdown("<div style='text-align: center;'><div style='color: var(--accent); font-size: 2rem; font-weight: 700;'>50+</div><div style='color: var(--text-secondary); font-size: 0.9rem; font-weight: 500; text-transform: uppercase;'>Specialist Doctors</div></div>", unsafe_allow_html=True)
+        st.markdown("""<div style='text-align: center; padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 4px;'>
+            <div style='color: var(--accent); font-size: 2rem; font-weight: 700;'>50+</div>
+            <div style='color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;'>Specialist Doctors</div>
+        </div>""", unsafe_allow_html=True)
     with m2:
-        st.markdown("<div style='text-align: center;'><div style='color: var(--accent); font-size: 2rem; font-weight: 700;'>10k+</div><div style='color: var(--text-secondary); font-size: 0.9rem; font-weight: 500; text-transform: uppercase;'>Patients Treated</div></div>", unsafe_allow_html=True)
+        st.markdown("""<div style='text-align: center; padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 4px;'>
+            <div style='color: var(--accent); font-size: 2rem; font-weight: 700;'>10k+</div>
+            <div style='color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;'>Patients Treated</div>
+        </div>""", unsafe_allow_html=True)
     with m3:
-        st.markdown("<div style='text-align: center;'><div style='color: var(--accent); font-size: 2rem; font-weight: 700;'>24/7</div><div style='color: var(--text-secondary); font-size: 0.9rem; font-weight: 500; text-transform: uppercase;'>AI Triage</div></div>", unsafe_allow_html=True)
+        st.markdown("""<div style='text-align: center; padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 4px;'>
+            <div style='color: var(--accent); font-size: 2rem; font-weight: 700;'>24/7</div>
+            <div style='color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;'>AI Triage</div>
+        </div>""", unsafe_allow_html=True)
     with m4:
-        st.markdown("<div style='text-align: center;'><div style='color: var(--accent); font-size: 2rem; font-weight: 700;'>99.9%</div><div style='color: var(--text-secondary); font-size: 0.9rem; font-weight: 500; text-transform: uppercase;'>Uptime</div></div>", unsafe_allow_html=True)
-    
+        st.markdown("""<div style='text-align: center; padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 4px;'>
+            <div style='color: var(--accent); font-size: 2rem; font-weight: 700;'>99.9%</div>
+            <div style='color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;'>Uptime</div>
+        </div>""", unsafe_allow_html=True)
+
     st.markdown("<br><br><hr>", unsafe_allow_html=True)
-    
+
     # Bottom Buttons
     col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
     with col2:
@@ -73,12 +89,12 @@ def _render_landing_page():
 
 def _render_login_form():
     """Render the login form."""
-    st.markdown("<div style='max-width: 500px; margin: 0 auto; padding: 2rem; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px;'>", unsafe_allow_html=True)
+    st.markdown("<div style='max-width: 500px; margin: 0 auto; padding: 2rem; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px;'>", unsafe_allow_html=True)
     with st.form("login_form", clear_on_submit=False):
         st.markdown("##### Welcome Back")
 
         email = st.text_input("Email", placeholder="you@example.com", key="login_email")
-        password = st.text_input("Password", type="password", placeholder="••••••••", key="login_password")
+        password = st.text_input("Password", type="password", placeholder="Enter password", key="login_password")
 
         submitted = st.form_submit_button("Login", use_container_width=True, type="primary")
 
@@ -101,8 +117,8 @@ def _render_login_form():
                         save_session_to_cookies(cookie_ctrl, result["session"])
 
                     st.success(result["message"])
-                    
-                    # Redirect to appropriate dashboard
+
+                    # Redirect to appropriate dashboard via pending redirect
                     role_page_map = {
                         "patient": "pages/1_Patient_Portal.py",
                         "receptionist": "pages/2_Reception_Dashboard.py",
@@ -112,15 +128,14 @@ def _render_login_form():
                     }
                     target_page = role_page_map.get(st.session_state["role"])
                     if target_page:
-                        st.switch_page(target_page)
-                    else:
-                        st.rerun()
+                        st.session_state["_pending_redirect"] = target_page
+                    st.rerun()
                 else:
                     st.error(result["message"])
-                    
+
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
-    
+
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if st.button("Don't have an account? Sign Up", use_container_width=True):
@@ -130,7 +145,7 @@ def _render_login_form():
 
 def _render_signup_form():
     """Render the signup form."""
-    st.markdown("<div style='max-width: 500px; margin: 0 auto; padding: 2rem; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px;'>", unsafe_allow_html=True)
+    st.markdown("<div style='max-width: 500px; margin: 0 auto; padding: 2rem; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px;'>", unsafe_allow_html=True)
     with st.form("signup_form", clear_on_submit=False):
         st.markdown("##### Create Your Account")
 
@@ -171,15 +186,15 @@ def _render_signup_form():
                         except Exception:
                             pass
 
-                    st.success("✅ Account created! Please sign in.")
+                    st.success("Account created successfully. Please sign in.")
                     st.session_state.auth_view = "login"
                     st.rerun()
                 else:
                     st.error(result["message"])
-                    
+
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
-    
+
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if st.button("Already have an account? Log In", use_container_width=True):
@@ -192,6 +207,7 @@ def render_logout_button(key: str = None):
     if st.button("Sign Out", key=key, use_container_width=True):
         cookie_ctrl = st.session_state.get("_cookie_controller")
         sign_out(cookie_controller=cookie_ctrl)
+        st.session_state["_pending_redirect"] = "app.py"
         st.rerun()
 
 
@@ -209,24 +225,35 @@ def require_auth(allowed_roles: list = None):
     Returns:
         True if authenticated and authorized, else halts page.
     """
-    # Attempt cookie-based session restoration before auth check
-    if not is_authenticated():
-        try:
-            from streamlit_cookies_controller import CookieController
-            from database.supabase_client import restore_session_from_cookies
+    import time
+    if "_pending_redirect" in st.session_state:
+        time.sleep(0.5)
+        target = st.session_state.pop("_pending_redirect")
+        if target:
+            st.switch_page(target)
 
-            # Reuse existing controller or create one for this page
-            if "_cookie_controller" not in st.session_state:
-                cookie_ctrl = CookieController()
-                st.session_state["_cookie_controller"] = cookie_ctrl
-            else:
-                cookie_ctrl = st.session_state["_cookie_controller"]
+    # ALWAYS initialize CookieController so cookies can be saved (e.g. after token refresh)
+    try:
+        from streamlit_cookies_controller import CookieController
+        from database.supabase_client import restore_session_from_cookies
 
+        # Reuse existing controller or create one for this page
+        if "_cookie_controller" not in st.session_state:
+            cookie_ctrl = CookieController()
+            st.session_state["_cookie_controller"] = cookie_ctrl
+        else:
+            cookie_ctrl = st.session_state["_cookie_controller"]
+            
+        # We must also call its render method or something? 
+        # Actually CookieController() call itself renders the component.
+        
+        # Attempt cookie-based session restoration before auth check
+        if not is_authenticated():
             restored = restore_session_from_cookies(cookie_ctrl)
             if restored:
                 st.rerun()  # Re-render page in authenticated state
-        except Exception:
-            pass  # Fall through to normal auth check
+    except Exception:
+        pass  # Fall through to normal auth check
 
     if not is_authenticated():
         render_auth_page()

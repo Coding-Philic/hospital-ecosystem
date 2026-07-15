@@ -15,27 +15,27 @@ def render_kpi_row(stats: dict):
     cols = st.columns(4)
 
     kpis = [
-        ("Total Appointments", stats.get("total_appointments", 0), "📋", COLORS["primary"]),
-        ("Waiting Patients", stats.get("waiting_patients", 0), "⏳", COLORS["warning"]),
-        ("Completed", stats.get("completed_consultations", 0), "✅", COLORS["success"]),
-        ("Active Doctors", stats.get("active_doctors", 0), "🩺", COLORS["accent"]),
+        ("Total Appointments", stats.get("total_appointments", 0), COLORS["primary"]),
+        ("Waiting Patients", stats.get("waiting_patients", 0), COLORS["warning"]),
+        ("Completed", stats.get("completed_consultations", 0), COLORS["success"]),
+        ("Active Doctors", stats.get("active_doctors", 0), COLORS["accent"]),
     ]
 
-    for col, (label, value, icon, color) in zip(cols, kpis):
+    for col, (label, value, color) in zip(cols, kpis):
         with col:
             st.markdown(f"""
             <div style="
-                background: linear-gradient(135deg, {color}12, {color}05);
-                border: 1px solid {color}25;
-                border-radius: 14px;
+                background: var(--card-bg);
+                border: 1px solid var(--border-color);
+                border-top: 3px solid {color};
+                border-radius: 4px;
                 padding: 1.2rem;
                 text-align: center;
             ">
-                <div style="font-size: 1.5rem;">{icon}</div>
                 <div style="font-size: 2rem; font-weight: 800; color: {color};">
                     {value}
                 </div>
-                <div style="color: {COLORS['text_secondary']}; font-size: 0.85rem;">
+                <div style="color: var(--text-secondary); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px;">
                     {label}
                 </div>
             </div>
@@ -47,26 +47,26 @@ def render_kpi_row_extended(stats: dict):
     cols = st.columns(3)
 
     kpis = [
-        ("Pending Prescriptions", stats.get("pending_prescriptions", 0), "💊", COLORS["secondary"]),
-        ("Low Stock Items", stats.get("low_stock_items", 0), "⚠️", COLORS["danger"]),
-        ("In Progress", stats.get("in_progress", 0), "🔄", COLORS["info"]),
+        ("Pending Prescriptions", stats.get("pending_prescriptions", 0), COLORS["secondary"]),
+        ("Low Stock Items", stats.get("low_stock_items", 0), COLORS["danger"]),
+        ("In Progress", stats.get("in_progress", 0), COLORS["info"]),
     ]
 
-    for col, (label, value, icon, color) in zip(cols, kpis):
+    for col, (label, value, color) in zip(cols, kpis):
         with col:
             st.markdown(f"""
             <div style="
-                background: linear-gradient(135deg, {color}12, {color}05);
-                border: 1px solid {color}25;
-                border-radius: 14px;
+                background: var(--card-bg);
+                border: 1px solid var(--border-color);
+                border-top: 3px solid {color};
+                border-radius: 4px;
                 padding: 1.2rem;
                 text-align: center;
             ">
-                <div style="font-size: 1.5rem;">{icon}</div>
                 <div style="font-size: 2rem; font-weight: 800; color: {color};">
                     {value}
                 </div>
-                <div style="color: {COLORS['text_secondary']}; font-size: 0.85rem;">
+                <div style="color: var(--text-secondary); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px;">
                     {label}
                 </div>
             </div>
@@ -95,8 +95,7 @@ def render_department_load_chart(appointments: list):
             x=list(dept_counts.keys()),
             y=list(dept_counts.values()),
             marker=dict(
-                color=list(dept_counts.values()),
-                colorscale=[[0, COLORS["primary"]], [1, COLORS["accent"]]],
+                color=COLORS["primary"],
             ),
             text=list(dept_counts.values()),
             textposition="auto",
@@ -109,7 +108,7 @@ def render_department_load_chart(appointments: list):
         yaxis_title="Patients",
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(color=COLORS["text_primary"]),
+        font=dict(color=COLORS["text_primary"], family="Inter"),
         xaxis=dict(tickangle=-45),
         height=400,
     )
@@ -149,7 +148,7 @@ def render_urgency_pie_chart(appointments: list):
         title="Urgency Distribution",
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(color=COLORS["text_primary"]),
+        font=dict(color=COLORS["text_primary"], family="Inter"),
         height=350,
         showlegend=False,
     )
@@ -169,7 +168,7 @@ def render_status_pie_chart(appointments: list):
 
     colors = {
         "waiting": "#f59e0b",
-        "in_progress": "#6366f1",
+        "in_progress": COLORS["primary"],
         "completed": "#22c55e",
         "cancelled": "#ef4444",
         "no_show": "#94a3b8",
@@ -187,7 +186,7 @@ def render_status_pie_chart(appointments: list):
         title="Appointment Status",
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(color=COLORS["text_primary"]),
+        font=dict(color=COLORS["text_primary"], family="Inter"),
         height=350,
         showlegend=False,
     )
@@ -232,7 +231,7 @@ def render_doctor_workload_chart(doctors: list):
         xaxis_title="Patients",
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(color=COLORS["text_primary"]),
+        font=dict(color=COLORS["text_primary"], family="Inter"),
         height=max(300, len(names) * 40),
     )
 

@@ -104,10 +104,10 @@ COLORS = {
     "accent": "#3A9AD9",        # Medium Blue
     "light": "#6BCBEB",         # Light Blue
     "lightest": "#A2DFF7",      # Lightest Blue
-    "success": "#3A9AD9",       # Using accent for success/info to keep minimal
-    "warning": "#3A9AD9",       # Using accent
-    "danger": "#005F6B",        # Using secondary
-    "info": "#6BCBEB",          # Using light
+    "success": "#22c55e",       # Green (for success states)
+    "warning": "#f59e0b",       # Amber (for warnings)
+    "danger": "#ef4444",        # Red (for errors/emergencies)
+    "info": "#6BCBEB",          # Light Blue
     "bg_dark": "#ffffff",       # White background
     "bg_card": "#f8fafc",       # Very light gray for cards
     "bg_elevated": "#f1f5f9",   # Slightly darker gray for elevated

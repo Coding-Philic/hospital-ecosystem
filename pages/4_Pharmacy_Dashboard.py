@@ -1,5 +1,5 @@
 """
-MediFlow AI — 💊 Pharmacy Dashboard
+MediFlow AI — Pharmacy Dashboard
 ======================================
 Pharmacist dashboard for:
 - Incoming prescription queue
@@ -29,7 +29,7 @@ render_navbar()
 
 profile = get_current_user()
 
-st.markdown("# 💊 Pharmacy Dashboard")
+st.markdown("# Pharmacy Dashboard")
 
 # ── Active Tab Logic ────────────────────────────────────────────
 active_tab = st.session_state.get("active_tab", "Prescription Queue")
@@ -38,15 +38,15 @@ active_tab = st.session_state.get("active_tab", "Prescription Queue")
 # TAB 1: Prescription Queue
 # ══════════════════════════════════════════════════════════════
 if active_tab == "Prescription Queue":
-    st.markdown("### 📋 Incoming Prescriptions")
+    st.markdown("### Incoming Prescriptions")
 
     try:
         pending = db.get_pending_prescriptions()
 
         if not pending:
-            st.success("✅ No pending prescriptions. All caught up!")
+            st.success("No pending prescriptions. All caught up.")
         else:
-            st.info(f"📋 {len(pending)} prescription(s) pending processing")
+            st.info(f"{len(pending)} prescription(s) pending processing")
 
             for rx in pending:
                 patient_info = rx.get("patients", {}) or {}
@@ -55,14 +55,8 @@ if active_tab == "Prescription Queue":
                 d_user = doctor_info.get("users", {}) or {}
                 items = rx.get("prescription_items", [])
 
-                status_color = {
-                    "created": "#f59e0b",
-                    "sent_to_pharmacy": "#3b82f6",
-                    "partially_available": "#f97316",
-                }.get(rx.get("status", "created"), "#94a3b8")
-
                 with st.expander(
-                    f"💊 {rx.get('prescription_code', 'N/A')} — "
+                    f"Rx: {rx.get('prescription_code', 'N/A')} — "
                     f"{p_user.get('full_name', 'Unknown')} | "
                     f"{len(items)} items | "
                     f"Status: {rx.get('status', 'N/A').replace('_', ' ').title()}",
@@ -82,14 +76,14 @@ if active_tab == "Prescription Queue":
 
                     for item in items:
                         in_stock = item.get("is_in_stock")
-                        stock_icon = "✅" if in_stock else ("❌" if in_stock is False else "❓")
+                        stock_icon = "[In Stock]" if in_stock else ("[Out of Stock]" if in_stock is False else "[Unchecked]")
 
                         st.markdown(f"""
-                        {stock_icon} **{item.get('medicine_name', 'N/A')}** — {item.get('dosage', '')}
+                        **{item.get('medicine_name', 'N/A')}** {stock_icon} — {item.get('dosage', '')}
                         | {item.get('frequency', '')} | {item.get('duration', '')} | Qty: {item.get('quantity', 1)}
                         """)
                         if item.get("instructions"):
-                            st.caption(f"   📌 {item['instructions']}")
+                            st.caption(f"   Note: {item['instructions']}")
 
                     st.markdown("---")
 
@@ -97,18 +91,18 @@ if active_tab == "Prescription Queue":
                     col_check, col_dispense = st.columns(2)
 
                     with col_check:
-                        if st.button("🔍 Check Stock", key=f"check_{rx['id']}", use_container_width=True):
+                        if st.button("Check Stock", key=f"check_{rx['id']}", use_container_width=True):
                             with st.spinner("Checking inventory..."):
                                 result = check_prescription_stock(rx["id"])
 
                             if result.get("success"):
                                 if result.get("all_in_stock"):
-                                    st.success("✅ All items in stock!")
+                                    st.success("All items in stock.")
                                 else:
-                                    st.warning("⚠️ Some items need alternatives. Check Substitution Review tab.")
+                                    st.warning("Some items need alternatives. Check Substitution Review tab.")
 
                                 for item_result in result.get("items", []):
-                                    icon = "✅" if item_result["status"] == "in_stock" else "❌"
+                                    icon = "[OK]" if item_result["status"] == "in_stock" else "[LOW/OUT]"
                                     st.markdown(f"{icon} {item_result['medicine_name']} — "
                                               f"Available: {item_result['quantity_available']} | "
                                               f"Required: {item_result['quantity_required']}")
@@ -118,10 +112,10 @@ if active_tab == "Prescription Queue":
                                 st.error(result.get("message", "Stock check failed."))
 
                     with col_dispense:
-                        if st.button("✅ Dispense", key=f"dispense_{rx['id']}", use_container_width=True, type="primary"):
+                        if st.button("Dispense", key=f"dispense_{rx['id']}", use_container_width=True, type="primary"):
                             result = dispense_prescription(rx["id"], profile["id"])
                             if result["success"]:
-                                st.success("✅ Prescription dispensed!")
+                                st.success("Prescription dispensed.")
                                 # Workflow transition
                                 try:
                                     transition_state(
@@ -145,17 +139,17 @@ if active_tab == "Prescription Queue":
 # TAB 2: Inventory Management
 # ══════════════════════════════════════════════════════════════
 elif active_tab == "Inventory":
-    st.markdown("### 📦 Pharmacy Inventory")
+    st.markdown("### Pharmacy Inventory")
 
     # Stats
     try:
         low_stock = db.get_low_stock_items()
         col1, col2 = st.columns(2)
         with col1:
-            render_metric_card("Low Stock Items", len(low_stock), "⚠️", "#ef4444")
+            render_metric_card("Low Stock Items", len(low_stock), color="#ef4444")
         with col2:
             all_inventory = db.get_pharmacy_inventory()
-            render_metric_card("Total Products", len(all_inventory), "📦", "#6366f1")
+            render_metric_card("Total Products", len(all_inventory), color="#007B8A")
     except Exception:
         all_inventory = []
         low_stock = []
@@ -163,7 +157,7 @@ elif active_tab == "Inventory":
     st.markdown("---")
 
     # Search
-    search = st.text_input("🔍 Search Inventory", placeholder="Medicine name...", key="inv_search")
+    search = st.text_input("Search Inventory", placeholder="Medicine name...", key="inv_search")
 
     # Display inventory
     try:
@@ -199,7 +193,7 @@ elif active_tab == "Inventory":
                 if new_qty != qty:
                     if st.button("Update", key=f"inv_update_{inv['id']}"):
                         db.update_inventory(inv["id"], {"quantity_available": new_qty})
-                        st.success(f"✅ {med_name} updated to {new_qty}")
+                        st.success(f"{med_name} updated to {new_qty}")
                         st.rerun()
             st.markdown("---")
 
@@ -207,7 +201,7 @@ elif active_tab == "Inventory":
         st.error(f"Error loading inventory: {e}")
 
     # Add new medicine
-    with st.expander("➕ Add New Medicine to Catalog"):
+    with st.expander("Add New Medicine to Catalog"):
         with st.form("add_medicine_form"):
             acol1, acol2 = st.columns(2)
             with acol1:
@@ -219,7 +213,7 @@ elif active_tab == "Inventory":
                 new_strength = st.text_input("Strength", placeholder="e.g., 500mg")
                 new_price = st.number_input("Unit Price (₹)", min_value=0.0, value=10.0)
 
-            if st.form_submit_button("➕ Add Medicine", use_container_width=True):
+            if st.form_submit_button("Add Medicine", use_container_width=True):
                 if new_med_name:
                     db.create_medicine({
                         "name": new_med_name,
@@ -229,7 +223,7 @@ elif active_tab == "Inventory":
                         "strength": new_strength,
                         "unit_price": new_price,
                     })
-                    st.success(f"✅ {new_med_name} added!")
+                    st.success(f"{new_med_name} added.")
                     st.rerun()
 
 
@@ -237,8 +231,8 @@ elif active_tab == "Inventory":
 # TAB 3: Substitutions
 # ══════════════════════════════════════════════════════════════
 elif active_tab == "Substitutions":
-    st.markdown("### 🔄 AI-Suggested Substitutions")
-    st.info("Review and approve medicine substitutions suggested by AI. **No substitution happens automatically.**")
+    st.markdown("### AI-Suggested Substitutions")
+    st.info("Review and approve medicine substitutions suggested by AI. No substitution happens automatically.")
 
     try:
         pending = db.get_pending_prescriptions()
@@ -254,7 +248,7 @@ elif active_tab == "Substitutions":
                     p_user = patient_info.get("users", {}) or {}
 
                     st.markdown(f"""
-                    ##### ❌ {item.get('medicine_name', 'N/A')} — Out of Stock
+                    ##### {item.get('medicine_name', 'N/A')} — Out of Stock
                     **Patient:** {p_user.get('full_name', 'Unknown')} | **Rx:** {rx.get('prescription_code', 'N/A')}
                     """)
 
@@ -269,19 +263,19 @@ elif active_tab == "Substitutions":
 
                                 col1, col2 = st.columns([3, 1])
                                 with col1:
-                                    st.markdown(f"💊 {alt['name']} ({alt.get('generic_name', 'N/A')}) — Available: {alt_qty}")
+                                    st.markdown(f"{alt['name']} ({alt.get('generic_name', 'N/A')}) — Available: {alt_qty}")
                                 with col2:
                                     if alt_qty > 0:
-                                        if st.button("✅ Approve", key=f"approve_{item['id']}_{alt['id']}"):
+                                        if st.button("Approve", key=f"approve_{item['id']}_{alt['id']}"):
                                             approve_substitute(item["id"], alt["id"], profile["id"])
-                                            st.success(f"✅ Substitute approved: {alt['name']}")
+                                            st.success(f"Substitute approved: {alt['name']}")
                                             st.rerun()
                         else:
                             st.warning("No alternatives found in inventory.")
                     st.markdown("---")
 
         if not has_substitutions:
-            st.success("✅ No pending substitution reviews.")
+            st.success("No pending substitution reviews.")
 
     except Exception as e:
         st.error(f"Error: {e}")
@@ -291,7 +285,7 @@ elif active_tab == "Substitutions":
 # TAB 4: Dispense Medicines
 # ══════════════════════════════════════════════════════════════
 elif active_tab == "Dispense":
-    st.markdown("### 📊 Dispensing History")
+    st.markdown("### Dispensing History")
     st.info("Recent prescriptions dispensed by the pharmacy.")
 
     try:
@@ -303,7 +297,7 @@ elif active_tab == "Dispense":
             for entry in dispensed[:20]:
                 user_info = entry.get("users", {}) or {}
                 st.markdown(f"""
-                ✅ **Dispensed** — {entry.get('created_at', 'N/A')[:16]}
+                **Dispensed** — {entry.get('created_at', 'N/A')[:16]}
                 | By: {user_info.get('full_name', 'Unknown')}
                 | Rx ID: `{entry.get('entity_id', 'N/A')[:8]}...`
                 """)

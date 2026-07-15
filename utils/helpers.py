@@ -111,8 +111,8 @@ def urgency_badge_html(urgency: str) -> str:
 def workflow_state_badge(state: str) -> str:
     """Generate a styled badge for workflow state display."""
     from utils.constants import WORKFLOW_DISPLAY
-    display = WORKFLOW_DISPLAY.get(state, {"icon": "❓", "label": state, "color": "#94a3b8"})
-    return f'{display["icon"]} {display["label"]}'
+    display = WORKFLOW_DISPLAY.get(state, {"icon": "", "label": state, "color": "#94a3b8"})
+    return f'{display["label"]}'
 
 
 def hash_password(password: str) -> str:

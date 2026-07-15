@@ -1,5 +1,5 @@
 """
-MediFlow AI — 📊 Admin Dashboard
+MediFlow AI — Admin Dashboard
 ===================================
 Admin/management overview dashboard for:
 - Hospital-wide analytics
@@ -32,7 +32,7 @@ render_navbar()
 
 profile = get_current_user()
 
-st.markdown("# 📊 Admin Dashboard")
+st.markdown("# Admin Dashboard")
 st.markdown("Hospital-wide analytics and management panel.")
 
 # ── Active Tab Logic ────────────────────────────────────────────
@@ -42,7 +42,7 @@ active_tab = st.session_state.get("active_tab", "Analytics")
 # TAB 1: Analytics
 # ══════════════════════════════════════════════════════════════
 if active_tab == "Analytics":
-    st.markdown("### 📊 Today's Hospital Analytics")
+    st.markdown("### Today's Hospital Analytics")
 
     try:
         stats = db.get_today_stats()
@@ -76,7 +76,7 @@ if active_tab == "Analytics":
     except Exception as e:
         st.error(f"Error loading analytics: {e}")
 
-    if st.button("🔄 Refresh Analytics"):
+    if st.button("Refresh Analytics"):
         st.rerun()
 
 
@@ -84,15 +84,13 @@ if active_tab == "Analytics":
 # TAB 2: Doctors
 # ══════════════════════════════════════════════════════════════
 elif active_tab == "Doctors":
-    st.markdown("### 🩺 Doctor Management")
+    st.markdown("### Doctor Management")
 
     try:
         doctors = db.get_all_doctors()
         departments = db.get_all_departments()
 
         if doctors:
-            status_icons = {"available": "🟢", "busy": "🔴", "on_break": "🟡", "offline": "⚫"}
-
             for doc in doctors:
                 user_info = doc.get("users", {}) or {}
                 dept_info = doc.get("departments", {}) or {}
@@ -103,10 +101,10 @@ elif active_tab == "Doctors":
                     st.markdown(f"**Dr. {user_info.get('full_name', 'Unknown')}**")
                     st.caption(f"{doc.get('specialization', 'N/A')} | {doc.get('qualification', 'N/A')}")
                 with col2:
-                    st.markdown(f"🏥 {dept_info.get('name', 'N/A')}")
+                    st.markdown(f"{dept_info.get('name', 'N/A')}")
                     st.caption(f"Exp: {doc.get('experience_years', 0)} yrs | Fee: ₹{doc.get('consultation_fee', 0)}")
                 with col3:
-                    st.markdown(f"{status_icons.get(status, '⚪')} {status.title()}")
+                    st.markdown(f"{status.replace('_', ' ').title()}")
                 with col4:
                     st.markdown(f"Patients: {doc.get('current_token', 0)}/{doc.get('max_daily_patients', 30)}")
 
@@ -115,7 +113,7 @@ elif active_tab == "Doctors":
             st.info("No doctors registered yet.")
 
         # Add new doctor
-        with st.expander("➕ Register New Doctor"):
+        with st.expander("Register New Doctor"):
             with st.form("add_doctor_form"):
                 # First, get users with doctor role who don't have a doctor record yet
                 doctor_users = db.get_users_by_role("doctor")
@@ -144,7 +142,7 @@ elif active_tab == "Doctors":
                 fee = st.number_input("Consultation Fee (₹)", min_value=0, value=500)
                 max_patients = st.number_input("Max Daily Patients", min_value=1, value=30)
 
-                if st.form_submit_button("📝 Register Doctor", use_container_width=True, type="primary"):
+                if st.form_submit_button("Register Doctor", use_container_width=True, type="primary"):
                     if selected_user and dept_select:
                         db.create_doctor({
                             "user_id": selected_user["id"],
@@ -156,7 +154,7 @@ elif active_tab == "Doctors":
                             "consultation_fee": fee,
                             "max_daily_patients": max_patients,
                         })
-                        st.success(f"✅ Dr. {selected_user['full_name']} registered!")
+                        st.success(f"Dr. {selected_user['full_name']} registered.")
                         st.rerun()
 
     except Exception as e:
@@ -167,7 +165,7 @@ elif active_tab == "Doctors":
 # TAB 3: Users
 # ══════════════════════════════════════════════════════════════
 elif active_tab == "Users":
-    st.markdown("### 👥 User Management")
+    st.markdown("### User Management")
 
     try:
         all_users = db.get_all_users()
@@ -179,14 +177,12 @@ elif active_tab == "Users":
             role_counts[role] = role_counts.get(role, 0) + 1
 
         cols = st.columns(5)
-        role_icons = {"patient": "🏥", "doctor": "🩺", "receptionist": "👩‍⚕️", "pharmacist": "💊", "admin": "📊"}
         for col, role in zip(cols, config.USER_ROLES):
             with col:
                 render_metric_card(
                     role.title(),
                     role_counts.get(role, 0),
-                    role_icons.get(role, "👤"),
-                    "#6366f1",
+                    color="#007B8A",
                 )
 
         st.markdown("---")
@@ -203,10 +199,9 @@ elif active_tab == "Users":
             if role_filter != "All" and u.get("role") != role_filter:
                 continue
 
-            icon = role_icons.get(u.get("role", ""), "👤")
             col1, col2, col3, col4 = st.columns([3, 2, 1, 1])
             with col1:
-                st.markdown(f"{icon} **{u.get('full_name', 'Unknown')}**")
+                st.markdown(f"**{u.get('full_name', 'Unknown')}**")
                 st.caption(u.get("email", ""))
             with col2:
                 st.markdown(f"Phone: {u.get('phone', 'N/A')}")
@@ -214,7 +209,7 @@ elif active_tab == "Users":
                 st.markdown(f"`{u.get('role', 'N/A')}`")
             with col4:
                 active = u.get("is_active", True)
-                st.markdown(f"{'🟢 Active' if active else '🔴 Inactive'}")
+                st.markdown(f"{'Active' if active else 'Inactive'}")
             st.markdown("---")
 
     except Exception as e:
@@ -225,7 +220,7 @@ elif active_tab == "Users":
 # TAB 4: Departments
 # ══════════════════════════════════════════════════════════════
 elif active_tab == "Departments":
-    st.markdown("### 🏥 Department Management")
+    st.markdown("### Department Management")
 
     try:
         departments = db.get_all_departments()
@@ -238,7 +233,7 @@ elif active_tab == "Departments":
             with col2:
                 st.markdown(f"Floor: {dept.get('floor_number', 'N/A')}")
             with col3:
-                st.markdown(f"{'🟢 Active' if dept.get('is_active') else '🔴 Inactive'}")
+                st.markdown(f"{'Active' if dept.get('is_active') else 'Inactive'}")
             st.markdown("---")
 
     except Exception as e:
@@ -249,7 +244,7 @@ elif active_tab == "Departments":
 # TAB 5: Audit Trail
 # ══════════════════════════════════════════════════════════════
 elif active_tab == "Audit Trail":
-    st.markdown("### 📜 Audit Trail")
+    st.markdown("### Audit Trail")
     st.info("Complete log of all system actions, AI decisions, and human overrides.")
 
     # Filter
@@ -268,21 +263,10 @@ elif active_tab == "Audit Trail":
                 user_info = entry.get("users", {}) or {}
                 actor_name = user_info.get("full_name", "System")
                 was_override = entry.get("was_overridden", False)
-                override_icon = "⚠️ OVERRIDE" if was_override else ""
-
-                action_icons = {
-                    "ai_triage": "🧠",
-                    "queue_token_assigned": "🎫",
-                    "override_department": "⚠️",
-                    "prescription_created": "📝",
-                    "prescription_dispensed": "💊",
-                    "substitute_approved": "🔄",
-                    "workflow_transition": "📊",
-                }
-                icon = action_icons.get(entry.get("action", ""), "📌")
+                override_text = "[OVERRIDE]" if was_override else ""
 
                 st.markdown(f"""
-                {icon} **{entry.get('action', 'N/A').replace('_', ' ').title()}** {override_icon}
+                **{entry.get('action', 'N/A').replace('_', ' ').title()}** {override_text}
                 <br/><span style="color: var(--text-secondary); font-size: 0.85rem;">
                     {entry.get('created_at', 'N/A')[:19]} | By: {actor_name}
                     ({entry.get('actor_role', 'N/A')})

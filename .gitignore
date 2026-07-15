@@ -49,3 +49,13 @@ coverage.xml
 build/
 dist/
 *.egg-info/
+
+# Project Documentation
+Design.md
+Memory.md
+Phases.md
+prd.md
+Rules.md
+Architecture.md
+PROJECT_DETAILS.md
+PROJECT_INSTRUCTIONS.md

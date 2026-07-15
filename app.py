@@ -1,7 +1,7 @@
 """
 MediFlow AI — Main Application Entry Point
 =============================================
-🏥 Multi-Agent Hospital Orchestration Platform
+Multi-Agent Hospital Orchestration Platform
 Powered by Groq AI + LangGraph + Supabase
 
 This is the main Streamlit app entry point.
@@ -18,13 +18,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from streamlit_cookies_controller import CookieController
 from config import config
 from database.supabase_client import is_authenticated, get_user_role, get_current_user, restore_session_from_cookies
-from components.auth import render_auth_page, require_auth
-from components.navbar import render_navbar
+from components.auth import render_auth_page, require_auth, render_logout_button
 
 # ── Page Configuration ────────────────────────────────────────
 st.set_page_config(
     page_title="MediFlow AI — Hospital Orchestration",
-    page_icon="⚕️",
+    page_icon="M",
     layout="wide",
     initial_sidebar_state="collapsed",
     menu_items={
@@ -39,13 +38,16 @@ if "theme" not in st.session_state:
 if st.session_state.theme == "dark":
     theme_css = """
     :root {
-        --bg-color: #000c14;
-        --card-bg: #0f1f2a;
-        --border-color: #194354;
-        --text-primary: #bdf2cf;
-        --text-secondary: #25a18e;
-        --accent: #25a18e;
-        --accent-hover: #bdf2cf;
+        --bg-color: #0f172a;
+        --card-bg: #1e293b;
+        --border-color: #334155;
+        --text-primary: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --accent: #007B8A;
+        --accent-hover: #005F6B;
+        --accent-light: #6BCBEB;
+        --accent-lightest: #A2DFF7;
+        --accent-blue: #3A9AD9;
     }
     """
 else:
@@ -54,17 +56,20 @@ else:
         --bg-color: #ffffff;
         --card-bg: #f8fafc;
         --border-color: #e2e8f0;
-        --text-primary: #000c14;
-        --text-secondary: #0f1f2a;
-        --accent: #25a18e;
-        --accent-hover: #194354;
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --accent: #007B8A;
+        --accent-hover: #005F6B;
+        --accent-light: #6BCBEB;
+        --accent-lightest: #A2DFF7;
+        --accent-blue: #3A9AD9;
     }
     """
 
 st.markdown(f"""
 <style>
     {theme_css}
-    
+
     /* ── Import Google Font ─────────────────────────────── */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
@@ -94,8 +99,14 @@ st.markdown(f"""
 
     h1 {{
         color: var(--accent) !important;
+        font-weight: 800 !important;
+        letter-spacing: -0.02em !important;
     }}
-    
+
+    h2, h3 {{
+        font-weight: 700 !important;
+    }}
+
     .stMarkdown p {{
         color: var(--text-primary) !important;
     }}
@@ -104,25 +115,25 @@ st.markdown(f"""
     .stExpander {{
         background: var(--card-bg) !important;
         border: 1px solid var(--border-color) !important;
-        border-radius: 8px !important;
+        border-radius: 6px !important;
         box-shadow: none !important;
     }}
 
     div[data-testid="stForm"] {{
         background: var(--card-bg);
         border: 1px solid var(--border-color);
-        border-radius: 8px;
+        border-radius: 6px;
         padding: 2rem;
     }}
 
     /* ── Buttons ─────────────────────────────────────────── */
     .stButton > button {{
-        border-radius: 50px !important;
+        border-radius: 4px !important;
         font-weight: 600 !important;
         border: 1px solid var(--border-color) !important;
         background: var(--card-bg) !important;
         color: var(--text-primary) !important;
-        transition: all 0.2s ease !important;
+        transition: all 0.15s ease !important;
         box-shadow: none !important;
     }}
 
@@ -162,15 +173,15 @@ st.markdown(f"""
     [data-testid="stMetric"] {{
         background: var(--card-bg);
         border: 1px solid var(--border-color);
-        border-radius: 8px;
+        border-radius: 6px;
         padding: 1.5rem;
         box-shadow: none !important;
     }}
-    
+
     [data-testid="stMetricValue"] {{
         color: var(--accent) !important;
     }}
-    
+
     [data-testid="stMetricLabel"] {{
         color: var(--text-secondary) !important;
     }}
@@ -207,15 +218,20 @@ st.markdown(f"""
 
     /* ── DataFrames ──────────────────────────────────────── */
     .stDataFrame {{
-        border-radius: 8px;
+        border-radius: 6px;
         border: 1px solid var(--border-color);
         background: var(--card-bg);
+    }}
+
+    /* ── Horizontal Dividers ─────────────────────────────── */
+    hr {{
+        border-color: var(--border-color) !important;
     }}
 
     /* ── Hide Streamlit Branding ─────────────────────────── */
     #MainMenu {{ visibility: hidden; }}
     footer {{ visibility: hidden; }}
-    
+
     /* ── Responsive Mobile Styles ────────────────────────── */
     @media (max-width: 768px) {{
         div[data-testid="stForm"] {{
@@ -243,6 +259,12 @@ cookie_controller = CookieController()
 # Store controller in session_state so auth components can access it
 st.session_state["_cookie_controller"] = cookie_controller
 
+import time
+if "_pending_redirect" in st.session_state:
+    time.sleep(0.5) # Give client time to save cookie before page swap
+    target = st.session_state.pop("_pending_redirect")
+    st.switch_page(target)
+
 # Attempt to restore session from cookies (survives page refresh)
 if not is_authenticated():
     restored = restore_session_from_cookies(cookie_controller)
@@ -265,7 +287,8 @@ else:
     }
     target_page = role_page_map.get(role)
     if target_page and os.path.exists(os.path.join(os.path.dirname(__file__), target_page)):
-        st.switch_page(target_page)
+        st.session_state["_pending_redirect"] = target_page
+        st.rerun()
     else:
         st.error(f"Dashboard for role '{role}' not found.")
         render_logout_button()

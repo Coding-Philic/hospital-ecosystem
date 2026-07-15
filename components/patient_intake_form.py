@@ -28,10 +28,10 @@ def render_intake_form(on_submit=None):
     existing_patient = db.get_patient_by_user_id(profile["id"])
 
     if existing_patient:
-        st.success("✅ Your intake form is already on file. You can update it below.")
+        st.success("Your intake form is already on file. You can update it below.")
         _render_update_form(existing_patient, profile)
     else:
-        st.info("📋 Please fill out this intake form. It's saved permanently and reused on every visit.")
+        st.info("Please fill out this intake form. It is saved permanently and reused on every visit.")
         _render_new_form(profile, on_submit)
 
 
@@ -81,7 +81,7 @@ def _render_new_form(profile: dict, on_submit=None):
         with col6:
             insurance_id = st.text_input("Insurance ID / Policy Number", placeholder="Optional")
 
-        submitted = st.form_submit_button("💾 Save Intake Form", use_container_width=True, type="primary")
+        submitted = st.form_submit_button("Save Intake Form", use_container_width=True, type="primary")
 
         if submitted:
             # Parse lists
@@ -108,8 +108,7 @@ def _render_new_form(profile: dict, on_submit=None):
             try:
                 result = db.create_patient(patient_data)
                 if result:
-                    st.success(f"✅ Intake form saved! Your Patient ID: **{patient_code}**")
-                    st.balloons()
+                    st.success(f"Intake form saved. Your Patient ID: **{patient_code}**")
                     if on_submit:
                         on_submit(result[0] if isinstance(result, list) else result)
                     st.rerun()
@@ -125,11 +124,12 @@ def _render_update_form(patient: dict, profile: dict):
 
     st.markdown(f"""
     <div style="
-        background: linear-gradient(135deg, #1e293b, #334155);
+        background: var(--card-bg);
         padding: 1rem;
-        border-radius: 12px;
+        border-radius: 6px;
         margin-bottom: 1rem;
-        border-left: 4px solid #6366f1;
+        border: 1px solid var(--border-color);
+        border-left: 3px solid #007B8A;
     ">
         <strong>Patient ID:</strong> {patient.get('patient_id_code', 'N/A')}<br/>
         <strong>Name:</strong> {user_info.get('full_name', profile.get('full_name', 'N/A'))}<br/>
@@ -140,7 +140,7 @@ def _render_update_form(patient: dict, profile: dict):
     </div>
     """, unsafe_allow_html=True)
 
-    with st.expander("📝 Update Information"):
+    with st.expander("Update Information"):
         with st.form("update_intake_form"):
             allergies_text = st.text_input(
                 "Allergies",
@@ -154,7 +154,7 @@ def _render_update_form(patient: dict, profile: dict):
             emergency_name = st.text_input("Emergency Contact", value=patient.get("emergency_contact_name", ""))
             emergency_phone = st.text_input("Emergency Phone", value=patient.get("emergency_contact_phone", ""))
 
-            if st.form_submit_button("💾 Update", use_container_width=True):
+            if st.form_submit_button("Update", use_container_width=True):
                 allergies = [a.strip() for a in allergies_text.split(",") if a.strip()]
                 conditions = [c.strip() for c in conditions_text.split(",") if c.strip()]
                 db.update_patient(patient["id"], {
@@ -164,5 +164,5 @@ def _render_update_form(patient: dict, profile: dict):
                     "emergency_contact_name": emergency_name,
                     "emergency_contact_phone": emergency_phone,
                 })
-                st.success("✅ Information updated!")
+                st.success("Information updated.")
                 st.rerun()

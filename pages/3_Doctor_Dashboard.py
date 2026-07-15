@@ -1,5 +1,5 @@
 """
-MediFlow AI — 🩺 Doctor Dashboard
+MediFlow AI — Doctor Dashboard
 ====================================
 Doctor-facing dashboard for:
 - Pre-triaged patient queue with symptom summary
@@ -34,15 +34,14 @@ profile = get_current_user()
 # Get doctor record
 doctor = db.get_doctor_by_user_id(profile["id"])
 
-st.markdown("# 🩺 Doctor Dashboard")
+st.markdown("# Doctor Dashboard")
 
 if not doctor:
-    st.warning("⚠️ Your doctor profile hasn't been set up yet. Please contact an admin.")
+    st.warning("Your doctor profile hasn't been set up yet. Please contact an admin.")
     st.stop()
 
 # Doctor status display
-status_colors = {"available": "🟢", "busy": "🔴", "on_break": "🟡", "offline": "⚫"}
-st.markdown(f"**Status:** {status_colors.get(doctor['status'], '⚪')} {doctor['status'].replace('_', ' ').title()}")
+st.markdown(f"**Status:** {doctor['status'].replace('_', ' ').title()}")
 
 # ── Active Tab Logic ────────────────────────────────────────────
 active_tab = st.session_state.get("active_tab", "Patient Queue")
@@ -51,7 +50,7 @@ active_tab = st.session_state.get("active_tab", "Patient Queue")
 # TAB 1: Patient Queue
 # ══════════════════════════════════════════════════════════════
 if active_tab == "Patient Queue":
-    st.markdown("### 👥 Today's Patient Queue")
+    st.markdown("### Today's Patient Queue")
 
     try:
         today = date.today().isoformat()
@@ -63,15 +62,15 @@ if active_tab == "Patient Queue":
 
         # Stats
         col1, col2, col3 = st.columns(3)
-        col1.metric("⏳ Waiting", len(waiting))
-        col2.metric("🩺 In Progress", len(in_progress))
-        col3.metric("✅ Completed", len(completed))
+        col1.metric("Waiting", len(waiting))
+        col2.metric("In Progress", len(in_progress))
+        col3.metric("Completed", len(completed))
 
         st.markdown("---")
 
         # Current patient in progress
         if in_progress:
-            st.markdown("#### 🩺 Current Patient")
+            st.markdown("#### Current Patient")
             appt = in_progress[0]
             p_info = appt.get("patients", {}) or {}
             p_user = p_info.get("users", {}) or {}
@@ -79,13 +78,14 @@ if active_tab == "Patient Queue":
             st.markdown(f"""
             <div style="
                 background: var(--card-bg);
-                border: 2px solid var(--accent);
-                border-radius: 14px;
+                border: 1px solid var(--border-color);
+                border-left: 4px solid var(--accent);
+                border-radius: 6px;
                 padding: 1.2rem;
                 margin-bottom: 1rem;
             ">
                 <div style="font-size: 1.2rem; font-weight: 700; color: var(--accent);">
-                    🎫 {appt.get('token_number', 'N/A')} — {p_user.get('full_name', 'Unknown')}
+                    {appt.get('token_number', 'N/A')} — {p_user.get('full_name', 'Unknown')}
                 </div>
                 <div style="color: var(--text-secondary); margin-top: 0.3rem;">
                     {appt.get('symptom_summary', 'No symptoms recorded')[:200]}
@@ -93,29 +93,29 @@ if active_tab == "Patient Queue":
             </div>
             """, unsafe_allow_html=True)
 
-            st.info(f"📱 Patient phone: {p_user.get('phone', 'N/A')}")
+            st.info(f"Patient phone: {p_user.get('phone', 'N/A')}")
 
         st.markdown("---")
 
         # Waiting queue
         if waiting:
-            st.markdown("#### ⏳ Waiting Patients")
+            st.markdown("#### Waiting Patients")
             for appt in waiting:
                 p_info = appt.get("patients", {}) or {}
                 p_user = p_info.get("users", {}) or {}
 
-                urgency_icon = {"routine": "🟢", "semi_urgent": "🟡", "urgent": "🔴", "emergency": "🚨"}.get(
-                    appt.get("urgency", "routine"), "⚪"
+                urgency_label = {"routine": "Routine", "semi_urgent": "Semi-Urgent", "urgent": "Urgent", "emergency": "EMERGENCY"}.get(
+                    appt.get("urgency", "routine"), "Routine"
                 )
 
                 col1, col2, col3 = st.columns([1, 3, 2])
                 with col1:
-                    st.markdown(f"**{appt.get('token_number', 'N/A')}** {urgency_icon}")
+                    st.markdown(f"**{appt.get('token_number', 'N/A')}** <br/><span style='font-size:0.8rem;color:var(--text-secondary)'>{urgency_label}</span>", unsafe_allow_html=True)
                 with col2:
                     st.markdown(f"**{p_user.get('full_name', 'Unknown')}**")
                     st.caption(f"{appt.get('symptom_summary', 'No symptoms')[:100]}")
                 with col3:
-                    if st.button("▶️ Start Consultation", key=f"start_{appt['id']}"):
+                    if st.button("Start Consultation", key=f"start_{appt['id']}", type="primary"):
                         # Update appointment status
                         db.update_appointment(appt["id"], {
                             "status": "in_progress",
@@ -137,7 +137,7 @@ if active_tab == "Patient Queue":
 
                 st.markdown("---")
         else:
-            st.success("🎉 No patients waiting!")
+            st.success("No patients waiting.")
 
     except Exception as e:
         st.error(f"Error loading queue: {e}")
@@ -147,7 +147,7 @@ if active_tab == "Patient Queue":
 # TAB 2: Consultation (Diagnosis & Notes)
 # ══════════════════════════════════════════════════════════════
 elif active_tab == "Consultation":
-    st.markdown("### 📋 Patient Consultation")
+    st.markdown("### Patient Consultation")
 
     try:
         today = date.today().isoformat()
@@ -173,9 +173,9 @@ elif active_tab == "Consultation":
             triage_summary = appt.get("symptom_summary", "")
             if triage_summary:
                 st.markdown("""
-                <div style="background: rgba(255, 122, 89, 0.1); border-left: 4px solid var(--accent); padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem;">
+                <div style="background: var(--card-bg); border-left: 4px solid var(--accent); padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem; border-top: 1px solid var(--border-color); border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
                     <div style="font-weight: 700; color: var(--accent); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                        <span>🤖</span> AI Triage Report
+                        AI Triage Report
                     </div>
                     <div style="color: var(--text-primary); font-size: 0.95rem; white-space: pre-wrap;">
                         {}
@@ -220,7 +220,7 @@ elif active_tab == "Consultation":
                 follow_notes = st.text_input("Follow-up Instructions", key="consult_followup_notes",
                                             value=existing_consult.get("follow_up_notes", "") if existing_consult else "")
 
-                if st.form_submit_button("💾 Save Consultation", use_container_width=True, type="primary"):
+                if st.form_submit_button("Save Consultation", use_container_width=True, type="primary"):
                     vitals = {
                         "bp": bp, "temperature": temp, "pulse": pulse,
                         "spo2": spo2, "weight": weight, "height": height,
@@ -242,14 +242,14 @@ elif active_tab == "Consultation":
 
                     if existing_consult:
                         db.update_consultation(existing_consult["id"], consult_data)
-                        st.success("✅ Consultation updated!")
+                        st.success("Consultation updated.")
                     else:
                         db.create_consultation(consult_data)
-                        st.success("✅ Consultation saved!")
+                        st.success("Consultation saved.")
 
             # Complete consultation button
             st.markdown("---")
-            if st.button("✅ Complete Consultation & Discharge", use_container_width=True):
+            if st.button("Complete Consultation & Discharge", use_container_width=True):
                 db.update_appointment(appt["id"], {"status": "completed"})
                 db.update_doctor_status(doctor["id"], "available")
                 try:
@@ -260,7 +260,7 @@ elif active_tab == "Consultation":
                     )
                 except Exception:
                     pass
-                st.success("✅ Patient discharged!")
+                st.success("Patient discharged.")
                 st.rerun()
 
     except Exception as e:
@@ -271,7 +271,7 @@ elif active_tab == "Consultation":
 # TAB 3: Write Prescription
 # ══════════════════════════════════════════════════════════════
 elif active_tab == "Prescribe":
-    st.markdown("### 💊 Write Prescription")
+    st.markdown("### Write Prescription")
 
     try:
         today = date.today().isoformat()
@@ -293,7 +293,7 @@ elif active_tab == "Prescribe":
 
                 def handle_prescription_submit(items):
                     """Callback when prescription is submitted."""
-                    with st.spinner("🧠 Processing prescription through AI pipeline..."):
+                    with st.spinner("Processing prescription through AI pipeline..."):
                         result = run_prescription_pipeline(
                             consultation_id=consult["id"],
                             patient_id=appt["patient_id"],
@@ -308,26 +308,26 @@ elif active_tab == "Prescribe":
                     pharmacy_result = result.get("pharmacy", {})
 
                     if rx_result.get("success"):
-                        st.success(f"✅ {rx_result.get('message', 'Prescription created!')}")
+                        st.success(f"{rx_result.get('message', 'Prescription created!')}")
 
                         # Show validation results
                         validation = rx_result.get("validation", {})
                         if validation.get("warnings"):
                             for w in validation["warnings"]:
-                                st.warning(f"⚠️ {w}")
+                                st.warning(f"Warning: {w}")
                         if validation.get("interactions"):
                             for i in validation["interactions"]:
-                                st.error(f"⚠️ Drug Interaction: {i}")
+                                st.error(f"Drug Interaction: {i}")
                         if validation.get("allergy_alerts"):
                             for a in validation["allergy_alerts"]:
-                                st.error(f"🚨 Allergy Alert: {a}")
+                                st.error(f"Allergy Alert: {a}")
 
                         # Pharmacy results
                         if pharmacy_result:
                             if pharmacy_result.get("all_in_stock"):
-                                st.success("💊 All medicines are in stock at the pharmacy!")
+                                st.success("All medicines are in stock at the pharmacy.")
                             else:
-                                st.warning("⚠️ Some medicines may not be in stock. Alternatives have been suggested to the pharmacist.")
+                                st.warning("Some medicines may not be in stock. Alternatives have been suggested to the pharmacist.")
 
                         # Transition workflow
                         try:
@@ -339,10 +339,10 @@ elif active_tab == "Prescribe":
                         except Exception:
                             pass
                     else:
-                        st.error(f"❌ {rx_result.get('message', 'Failed to create prescription.')}")
+                        st.error(f"Failed: {rx_result.get('message', 'Failed to create prescription.')}")
 
                     if result.get("messages"):
-                        with st.expander("🤖 AI Agent Log"):
+                        with st.expander("AI Agent Log"):
                             for msg in result["messages"]:
                                 st.text(msg)
 
@@ -361,7 +361,7 @@ elif active_tab == "Prescribe":
 # TAB 4: Patient History
 # ══════════════════════════════════════════════════════════════
 elif active_tab == "Patient History":
-    st.markdown("### 📂 Patient History Lookup")
+    st.markdown("### Patient History Lookup")
 
     search = st.text_input("Search patient by ID or name", placeholder="MF-XXXXXXXX")
     if search:
@@ -387,7 +387,7 @@ elif active_tab == "Patient History":
 # TAB 5: Settings
 # ══════════════════════════════════════════════════════════════
 elif active_tab == "Settings":
-    st.markdown("### ⚙️ Doctor Settings")
+    st.markdown("### Doctor Settings")
 
     dept_info = doctor.get("departments", {}) or {}
 
@@ -407,7 +407,7 @@ elif active_tab == "Settings":
     st.markdown("---")
     st.markdown("#### Availability Status")
     status_options = ["available", "busy", "on_break", "offline"]
-    status_labels = {"available": "🟢 Available", "busy": "🔴 Busy", "on_break": "🟡 On Break", "offline": "⚫ Offline"}
+    status_labels = {"available": "Available", "busy": "Busy", "on_break": "On Break", "offline": "Offline"}
 
     def update_status():
         new_status = st.session_state.doctor_status_select

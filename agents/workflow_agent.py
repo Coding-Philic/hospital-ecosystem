@@ -192,7 +192,7 @@ def _state_label(state: Optional[str]) -> str:
     if not state:
         return "New"
     display = WORKFLOW_DISPLAY.get(state, {})
-    return f"{display.get('icon', '❓')} {display.get('label', state)}"
+    return f"{display.get('label', state)}"
 
 
 def _notify_patient_state_change(patient_id: str, new_state: str, notes: str = ""):

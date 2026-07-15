@@ -1,5 +1,5 @@
 """
-MediFlow AI — 👩‍⚕️ Reception Dashboard
+MediFlow AI — Reception Dashboard
 ==========================================
 Receptionist dashboard for:
 - Live patient queue overview
@@ -45,13 +45,13 @@ if active_tab == "Live Queue":
         stats = db.get_today_stats()
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            render_metric_card("Waiting", stats.get("waiting_patients", 0), "", "#007B8A")
+            render_metric_card("Waiting", stats.get("waiting_patients", 0), color="#007B8A")
         with col2:
-            render_metric_card("In Progress", stats.get("in_progress", 0), "", "#3A9AD9")
+            render_metric_card("In Progress", stats.get("in_progress", 0), color="#3A9AD9")
         with col3:
-            render_metric_card("Completed", stats.get("completed_consultations", 0), "", "#005F6B")
+            render_metric_card("Completed", stats.get("completed_consultations", 0), color="#005F6B")
         with col4:
-            render_metric_card("Total Today", stats.get("total_appointments", 0), "", "#6BCBEB")
+            render_metric_card("Total Today", stats.get("total_appointments", 0), color="#6BCBEB")
     except Exception:
         pass
 
@@ -77,7 +77,7 @@ if active_tab == "Live Queue":
         st.error(f"Error loading queue: {e}")
 
     # Auto-refresh
-    if st.button("🔄 Refresh Queue"):
+    if st.button("Refresh Queue"):
         st.rerun()
 
 
@@ -85,7 +85,7 @@ if active_tab == "Live Queue":
 # TAB 2: Triage Confirmation (AI Override)
 # ══════════════════════════════════════════════════════════════
 elif active_tab == "Triage Confirmation":
-    st.markdown("### ✅ AI Triage Confirmation")
+    st.markdown("### AI Triage Confirmation")
     st.info("Review AI-recommended department and urgency assignments. Confirm or override before finalizing.")
 
     try:
@@ -94,7 +94,7 @@ elif active_tab == "Triage Confirmation":
         unconfirmed = [a for a in today_appts if not a.get("receptionist_confirmed")]
 
         if not unconfirmed:
-            st.success("✅ All triage assignments have been confirmed.")
+            st.success("All triage assignments have been confirmed.")
         else:
             for appt in unconfirmed:
                 patient_info = appt.get("patients", {}) or {}
@@ -102,8 +102,8 @@ elif active_tab == "Triage Confirmation":
                 dept_info = appt.get("departments", {}) or {}
 
                 with st.expander(
-                    f"🎫 {appt.get('token_number', 'N/A')} — {user_info.get('full_name', 'Unknown')} "
-                    f"| AI → {appt.get('ai_recommended_department', 'N/A')} "
+                    f"{appt.get('token_number', 'N/A')} — {user_info.get('full_name', 'Unknown')} "
+                    f"| AI: {appt.get('ai_recommended_department', 'N/A')} "
                     f"({appt.get('ai_urgency_score', 'N/A')})",
                     expanded=True,
                 ):
@@ -183,7 +183,7 @@ elif active_tab == "Triage Confirmation":
                                 except Exception:
                                     pass
 
-                                st.success("Confirmed!")
+                                st.success("Confirmed.")
                                 st.rerun()
 
     except Exception as e:
@@ -216,7 +216,7 @@ elif active_tab == "Register Patient":
         reg_allergies = st.text_input("Known Allergies (comma-separated)", key="reg_allergies")
         reg_conditions = st.text_input("Chronic Conditions (comma-separated)", key="reg_conditions")
 
-        if st.form_submit_button("📝 Register Patient", use_container_width=True, type="primary"):
+        if st.form_submit_button("Register Patient", use_container_width=True, type="primary"):
             if not reg_name or not reg_email:
                 st.error("Name and email are required.")
             else:
@@ -242,7 +242,7 @@ elif active_tab == "Register Patient":
                                 "allergies": allergies,
                                 "chronic_conditions": conditions,
                             })
-                            st.success(f"✅ Patient registered! ID: **{patient_code}** | Temp password: **{temp_password}**")
+                            st.success(f"Patient registered. ID: **{patient_code}** | Temp password: **{temp_password}**")
                         except Exception as e:
                             st.error(f"Error creating patient record: {e}")
                     else:
@@ -253,7 +253,7 @@ elif active_tab == "Register Patient":
 # TAB 4: Search Patients
 # ══════════════════════════════════════════════════════════════
 elif active_tab == "Search":
-    st.markdown("### 🔍 Search Patients")
+    st.markdown("### Search Patients")
 
     search_term = st.text_input("Search by Patient ID or Name", placeholder="MF-XXXXXXXX or patient name")
 
@@ -280,7 +280,7 @@ elif active_tab == "Search":
 # TAB 5: Workflow Status View
 # ══════════════════════════════════════════════════════════════
 elif active_tab == "Workflow Overview":
-    st.markdown("### 📊 Workflow State Overview")
+    st.markdown("### Workflow State Overview")
     st.info("See where every patient currently is in their journey.")
 
     from utils.constants import WORKFLOW_DISPLAY
@@ -300,11 +300,11 @@ elif active_tab == "Workflow Overview":
                         pass
 
                 if state_patients:
-                    st.markdown(f"#### {display['icon']} {display['label']} ({len(state_patients)})")
+                    st.markdown(f"#### {display['label']} ({len(state_patients)})")
                     for appt in state_patients:
                         p_info = appt.get("patients", {}) or {}
                         p_user = p_info.get("users", {}) or {}
-                        st.markdown(f"- 🎫 {appt.get('token_number', 'N/A')} — {p_user.get('full_name', 'Unknown')}")
+                        st.markdown(f"- {appt.get('token_number', 'N/A')} — {p_user.get('full_name', 'Unknown')}")
                     st.markdown("---")
         else:
             st.info("No appointments today.")

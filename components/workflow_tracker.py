@@ -40,29 +40,27 @@ def render_workflow_tracker(current_state: str, workflow_history: list = None):
         min-width: 80px;
         text-align: center;
         padding: 0.5rem 0.3rem;
-        border-radius: 8px;
+        border-radius: 4px;
         font-size: 0.72rem;
-        transition: all 0.3s ease;
+        transition: all 0.15s ease;
         position: relative;
     }
     .workflow-step.completed {
-        background: rgba(34, 197, 94, 0.15);
-        border: 1px solid rgba(34, 197, 94, 0.3);
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.25);
         color: #22c55e;
     }
     .workflow-step.current {
-        background: rgba(99, 102, 241, 0.2);
-        border: 2px solid #6366f1;
-        color: #818cf8;
+        background: rgba(0, 123, 138, 0.12);
+        border: 2px solid #007B8A;
+        color: #007B8A;
         font-weight: 700;
-        box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
     }
     .workflow-step.pending {
-        background: rgba(148, 163, 184, 0.08);
-        border: 1px solid rgba(148, 163, 184, 0.15);
-        color: #475569;
+        background: var(--card-bg, #f8fafc);
+        border: 1px solid var(--border-color, #e2e8f0);
+        color: var(--text-secondary, #94a3b8);
     }
-    .workflow-step .icon { font-size: 1.2rem; }
     .workflow-step .label { margin-top: 2px; }
     </style>
     """, unsafe_allow_html=True)
@@ -70,7 +68,7 @@ def render_workflow_tracker(current_state: str, workflow_history: list = None):
     # Build HTML
     steps_html = '<div class="workflow-tracker">'
     for i, state in enumerate(states):
-        display = WORKFLOW_DISPLAY.get(state, {"icon": "❓", "label": state, "color": "#94a3b8"})
+        display = WORKFLOW_DISPLAY.get(state, {"icon": "", "label": state, "color": "#94a3b8"})
 
         if i < current_index:
             css_class = "completed"
@@ -79,17 +77,17 @@ def render_workflow_tracker(current_state: str, workflow_history: list = None):
         else:
             css_class = "pending"
 
-        steps_html += f"""<div class="workflow-step {css_class}"><div class="icon">{display['icon']}</div><div class="label">{display['label']}</div></div>"""
+        steps_html += f"""<div class="workflow-step {css_class}"><div class="label">{display['label']}</div></div>"""
 
     steps_html += '</div>'
     st.markdown(steps_html, unsafe_allow_html=True)
 
     # Show timeline details if history available
     if workflow_history:
-        with st.expander("📜 View Detailed Timeline"):
+        with st.expander("View Detailed Timeline"):
             for entry in reversed(workflow_history):
                 state = entry.get("state", entry.get("current_state", "unknown"))
-                display = WORKFLOW_DISPLAY.get(state, {"icon": "❓", "label": state})
+                display = WORKFLOW_DISPLAY.get(state, {"icon": "", "label": state})
                 timestamp = entry.get("timestamp", entry.get("created_at", ""))
                 by = entry.get("transitioned_by", "System")
                 notes = entry.get("notes", "")
@@ -113,10 +111,10 @@ def render_workflow_tracker(current_state: str, workflow_history: list = None):
                     date_str = ""
 
                 st.markdown(f"""
-                **{display['icon']} {display['label']}** — {time_str}
-                <br/><span style="color: #94a3b8; font-size: 0.8rem;">
-                    {date_str} • By: {by}
-                    {f' • Note: {notes}' if notes else ''}
+                **{display['label']}** — {time_str}
+                <br/><span style="color: var(--text-secondary); font-size: 0.8rem;">
+                    {date_str} | By: {by}
+                    {f' | Note: {notes}' if notes else ''}
                 </span>
                 """, unsafe_allow_html=True)
                 st.markdown("---")
@@ -124,17 +122,17 @@ def render_workflow_tracker(current_state: str, workflow_history: list = None):
 
 def render_mini_status(current_state: str):
     """Render a compact workflow status badge."""
-    display = WORKFLOW_DISPLAY.get(current_state, {"icon": "❓", "label": current_state, "color": "#94a3b8"})
+    display = WORKFLOW_DISPLAY.get(current_state, {"icon": "", "label": current_state, "color": "#94a3b8"})
 
     st.markdown(f"""
     <span style="
-        background: {display['color']}20;
+        background: {display['color']}15;
         color: {display['color']};
         padding: 4px 14px;
-        border-radius: 20px;
+        border-radius: 4px;
         font-weight: 600;
         font-size: 0.85rem;
     ">
-        {display['icon']} {display['label']}
+        {display['label']}
     </span>
     """, unsafe_allow_html=True)

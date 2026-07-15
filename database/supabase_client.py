@@ -94,6 +94,7 @@ def save_session_to_cookies(cookie_controller, session):
     """
     try:
         if session and hasattr(session, "access_token") and hasattr(session, "refresh_token"):
+            # Attempt to set via controller
             cookie_controller.set(
                 COOKIE_ACCESS_TOKEN,
                 session.access_token,
@@ -106,6 +107,19 @@ def save_session_to_cookies(cookie_controller, session):
                 max_age=COOKIE_MAX_AGE,
                 path="/",
             )
+            
+            # Robust fallback: inject JS directly to ensure cookies are set
+            import streamlit.components.v1 as components
+            js_code = f"""
+            <script>
+                const date = new Date();
+                date.setTime(date.getTime() + ({COOKIE_MAX_AGE} * 1000));
+                const expires = "expires=" + date.toUTCString();
+                window.parent.document.cookie = "{COOKIE_ACCESS_TOKEN}={session.access_token};" + expires + ";path=/";
+                window.parent.document.cookie = "{COOKIE_REFRESH_TOKEN}={session.refresh_token};" + expires + ";path=/";
+            </script>
+            """
+            components.html(js_code, height=0, width=0)
     except Exception:
         pass  # Cookie write failure is non-critical
 
@@ -118,6 +132,15 @@ def clear_session_cookies(cookie_controller):
     try:
         cookie_controller.remove(COOKIE_ACCESS_TOKEN, path="/")
         cookie_controller.remove(COOKIE_REFRESH_TOKEN, path="/")
+        
+        import streamlit.components.v1 as components
+        js_code = f"""
+        <script>
+            window.parent.document.cookie = "{COOKIE_ACCESS_TOKEN}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            window.parent.document.cookie = "{COOKIE_REFRESH_TOKEN}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        </script>
+        """
+        components.html(js_code, height=0, width=0)
     except Exception:
         pass  # Cookie removal failure is non-critical
 
@@ -127,32 +150,37 @@ def restore_session_from_cookies(cookie_controller) -> bool:
     Attempt to restore a Supabase session from browser cookies.
     If valid tokens exist, re-authenticate and populate session_state.
     Returns True if session was successfully restored.
-
-    Handles the async timing of the cookie component:
-    - 1st render after refresh: component not loaded → cookies unreadable → skip
-    - 2nd render (component loaded): cookies readable → restore session → rerun
     """
     # Already authenticated in this session — skip
     if st.session_state.get("authenticated", False):
         return True
+
+    # User explicitly logged out this session
+    if st.session_state.get("_explicitly_logged_out", False):
+        return False
 
     # Already confirmed no valid cookies exist — don't keep retrying
     if st.session_state.get("_session_restore_failed", False):
         return False
 
     try:
-        # getAll() returns None if the component hasn't loaded yet,
-        # or a dict (possibly empty) once the component is ready.
-        all_cookies = cookie_controller.getAll()
-
-        if all_cookies is None:
-            # Component hasn't loaded yet — DON'T set any flag.
-            # Streamlit will auto-rerun when the component mounts.
-            return False
-
-        # Component is loaded — extract our tokens
-        access_token = all_cookies.get(COOKIE_ACCESS_TOKEN)
-        refresh_token = all_cookies.get(COOKIE_REFRESH_TOKEN)
+        access_token = None
+        refresh_token = None
+        
+        # Streamlit >= 1.38 natively supports reading cookies synchronously via st.context
+        if hasattr(st, "context") and hasattr(st.context, "cookies"):
+            access_token = st.context.cookies.get(COOKIE_ACCESS_TOKEN)
+            refresh_token = st.context.cookies.get(COOKIE_REFRESH_TOKEN)
+            
+        # Fallback to streamlit_cookies_controller for older Streamlit or if missing
+        if not access_token or not refresh_token:
+            all_cookies = cookie_controller.getAll()
+            if all_cookies is None:
+                # Component hasn't loaded yet — DON'T set any flag.
+                # Streamlit will auto-rerun when the component mounts.
+                return False
+            access_token = all_cookies.get(COOKIE_ACCESS_TOKEN)
+            refresh_token = all_cookies.get(COOKIE_REFRESH_TOKEN)
 
         if not access_token or not refresh_token:
             # Component loaded but no tokens found — user genuinely not logged in
@@ -299,6 +327,9 @@ def sign_out(cookie_controller=None):
     for key in ["user", "profile", "session", "authenticated", "role", "_session_restore_failed"]:
         if key in st.session_state:
             del st.session_state[key]
+            
+    # Set explicitly logged out flag to prevent immediate auto re-login
+    st.session_state["_explicitly_logged_out"] = True
 
 
 def get_current_user() -> dict:
