@@ -61,7 +61,14 @@ elif active_tab == "My Queue":
     else:
         try:
             appointments = db.get_appointments_by_patient(patient["id"])
-            active = [a for a in appointments if a.get("status") in ("waiting", "in_progress")]
+            # Filter for active appointments that were created today
+            import datetime
+            today_str = datetime.date.today().isoformat()
+            active = [
+                a for a in appointments 
+                if a.get("status") in ("waiting", "in_progress") 
+                and a.get("created_at", "").startswith(today_str)
+            ]
 
             if active:
                 for appt in active:

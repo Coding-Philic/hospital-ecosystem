@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from components.auth import require_auth
 from components.navbar import render_navbar
 from components.queue_display import render_department_queue, render_metric_card
-from components.workflow_tracker import render_mini_status
+from components.workflow_tracker import render_mini_status, render_workflow_tracker
 from database.supabase_client import get_current_user
 from database import queries as db
 from agents.workflow_agent import transition_state, get_valid_next_states, get_current_state
@@ -89,6 +89,10 @@ elif active_tab == "Triage Confirmation":
     st.info("Review AI-recommended department and urgency assignments. Confirm or override before finalizing.")
 
     try:
+        departments = db.get_all_departments()
+        if not departments:
+            departments = [{"id": "0", "name": "General"}] # Fallback
+            
         # Get appointments pending confirmation
         today_appts = db.get_today_appointments()
         unconfirmed = [a for a in today_appts if not a.get("receptionist_confirmed")]
@@ -175,7 +179,7 @@ elif active_tab == "Triage Confirmation":
                                         transition_state(
                                             appointment_id=appt["id"],
                                             patient_id=appt["patient_id"],
-                                            new_state="triaged",
+                                            new_state="queued",
                                             transitioned_by=profile["id"],
                                             transitioned_by_role="receptionist",
                                             notes=f"Confirmed by reception. Department: {override_dept}",
@@ -304,9 +308,130 @@ elif active_tab == "Workflow Overview":
                     for appt in state_patients:
                         p_info = appt.get("patients", {}) or {}
                         p_user = p_info.get("users", {}) or {}
-                        st.markdown(f"- {appt.get('token_number', 'N/A')} — {p_user.get('full_name', 'Unknown')}")
+                        
+                        with st.container(border=True):
+                            st.markdown(f"##### {appt.get('token_number', 'N/A')} — {p_user.get('full_name', 'Unknown')}")
+                            # Render the full visual progress bar for the patient's journey
+                            render_workflow_tracker(state_key)
                     st.markdown("---")
         else:
             st.info("No appointments today.")
     except Exception as e:
         st.error(f"Error: {e}")
+
+# ══════════════════════════════════════════════════════════════
+# TAB 6: Billing & Discharge
+# ══════════════════════════════════════════════════════════════
+elif active_tab == "Billing & Discharge":
+    st.markdown("### Billing & Discharge")
+    st.info("Calculate final bills and discharge active patients.")
+
+    try:
+        active_appts = db.get_active_appointments_for_billing()
+        if not active_appts:
+            st.success("No active patients waiting for billing/discharge.")
+        else:
+            # Let receptionist select a patient
+            appt_options = {}
+            for appt in active_appts:
+                p_info = appt.get("patients", {}) or {}
+                p_user = p_info.get("users", {}) or {}
+                token = appt.get("token_number", "N/A")
+                name = p_user.get("full_name", "Unknown")
+                appt_options[f"{token} — {name}"] = appt
+
+            selected_str = st.selectbox("Select Patient to Bill/Discharge", options=list(appt_options.keys()))
+            if selected_str:
+                selected_appt = appt_options[selected_str]
+                st.markdown("---")
+                
+                # Fetch billing details
+                with st.spinner("Calculating bill..."):
+                    bill_data = db.get_billing_details(selected_appt["id"])
+                    
+                doc_info = selected_appt.get("doctors", {}) or {}
+                doc_fee = doc_info.get("consultation_fee") or 0.0
+                
+                pharmacy_total = 0.0
+                rx_items = []
+                for rx in bill_data.get("prescriptions", []):
+                    for item in rx.get("prescription_items", []):
+                        med = item.get("medicine", {}) or {}
+                        qty = item.get("quantity", 0)
+                        price = med.get("unit_price") or 0.0
+                        cost = float(qty) * float(price)
+                        pharmacy_total += cost
+                        rx_items.append({
+                            "name": med.get("name", "Unknown Medicine"),
+                            "qty": qty,
+                            "price": price,
+                            "total": cost
+                        })
+
+                grand_total = float(doc_fee) + pharmacy_total
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("#### Invoice Details")
+                    
+                    st.markdown(f"**Consultation Fee (Dr. {doc_info.get('users', {}).get('full_name', '')}):** ₹{doc_fee:.2f}")
+                    st.markdown("**Pharmacy Charges:**")
+                    if not rx_items:
+                        st.markdown("- *No medicines prescribed*")
+                    else:
+                        for item in rx_items:
+                            st.markdown(f"- {item['name']} (x{item['qty']}) @ ₹{item['price']:.2f} = **₹{item['total']:.2f}**")
+                    
+                    st.markdown("---")
+                    st.markdown(f"### Total Amount Due: ₹{grand_total:.2f}")
+                
+                with col2:
+                    st.markdown("#### Actions")
+                    st.info("Review the final bill with the patient. Once payment is settled, click the button below to discharge them.")
+                    
+                    if st.button("Settle Bill & Discharge", type="primary", use_container_width=True):
+                        # Construct JSON invoice
+                        invoice_data = {
+                            "consultation_fee": float(doc_fee),
+                            "pharmacy_items": rx_items,
+                            "pharmacy_total": pharmacy_total,
+                            "grand_total": grand_total
+                        }
+                        
+                        try:
+                            # 1. Ensure state is moved to billing (skip if already there)
+                            current_state = get_current_state(selected_appt["id"])
+                            if current_state != "billing":
+                                transition_state(
+                                    selected_appt["id"],
+                                    selected_appt["patient_id"],
+                                    "billing",
+                                    profile["id"], "receptionist",
+                                    "Moved to billing"
+                                )
+                                
+                            # 2. Transition to discharged with invoice data in metadata
+                            client = db.get_supabase_admin_client()
+                            client.table("workflow_states").insert({
+                                "appointment_id": selected_appt["id"],
+                                "patient_id": selected_appt["patient_id"],
+                                "current_state": "discharged",
+                                "previous_state": "billing",
+                                "transitioned_by_role": "receptionist",
+                                "notes": "Patient discharged after bill settlement.",
+                                "metadata": {"invoice": invoice_data}
+                            }).execute()
+                            
+                            # 3. Update appointment status
+                            client.table("appointments").update({
+                                "status": "completed"
+                            }).eq("id", selected_appt["id"]).execute()
+                            
+                            st.success(f"Bill settled (₹{grand_total:.2f}). Patient discharged!")
+                            st.rerun()
+                            
+                        except Exception as e:
+                            st.error(f"Failed to discharge patient: {e}")
+
+    except Exception as e:
+        st.error(f"Error loading billing data: {e}")

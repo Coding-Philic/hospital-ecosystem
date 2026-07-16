@@ -258,7 +258,7 @@ def render_navbar():
     # Define tabs for each role (Unchanged)
     ROLE_TABS = {
         "patient": ["New Visit", "My Queue", "Prescriptions", "Visit History", "My Profile"],
-        "receptionist": ["Live Queue", "Triage Confirmation", "Register Patient", "Search", "Workflow Overview"],
+        "receptionist": ["Live Queue", "Triage Confirmation", "Register Patient", "Search", "Workflow Overview", "Billing & Discharge"],
         "doctor": ["Patient Queue", "Consultation", "Prescribe", "Patient History", "Settings"],
         "pharmacist": ["Prescription Queue", "Inventory", "Substitutions", "Dispense"],
         "admin": ["Analytics", "Doctors", "Users", "Departments", "Audit Trail"]

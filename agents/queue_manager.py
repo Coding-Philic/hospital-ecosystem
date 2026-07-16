@@ -151,9 +151,9 @@ def assign_queue_token(
             db.create_workflow_state({
                 "appointment_id": appointment["id"],
                 "patient_id": patient_id,
-                "current_state": "queued",
-                "previous_state": "registered",
-                "notes": f"Queue token {token_number} assigned. Department: {dept_name}",
+                "current_state": "registered",
+                "previous_state": None,
+                "notes": f"Registered via AI intake. Department: {dept_name}",
             })
 
             # Create audit log entry

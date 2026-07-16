@@ -372,6 +372,7 @@ def get_pending_prescriptions() -> list:
     response = client.table("prescriptions").select(
         "*, patients!prescriptions_patient_id_fkey(patient_id_code, users!patients_user_id_fkey(full_name, phone)), "
         "doctors!prescriptions_doctor_id_fkey(users!doctors_user_id_fkey(full_name)), "
+        "consultations!prescriptions_consultation_id_fkey(appointment_id), "
         "prescription_items(*)"
     ).in_("status", ["created", "sent_to_pharmacy", "partially_available"]).order("created_at").execute()
     return getattr(response, "data", []) if response else []
@@ -512,6 +513,54 @@ def get_audit_log(limit: int = 100, entity_type: str = None) -> list:
 
     response = query.execute()
     return getattr(response, "data", []) if response else []
+
+
+# ╔══════════════════════════════════════════════════════════╗
+# ║  BILLING QUERIES                                          ║
+# ╚══════════════════════════════════════════════════════════╝
+
+def get_active_appointments_for_billing() -> list:
+    """Fetch all appointments that are active (not completed) for billing review."""
+    client = get_supabase_admin_client()
+    response = client.table("appointments").select(
+        "*, patients!appointments_patient_id_fkey(patient_id_code, users!patients_user_id_fkey(full_name, phone)), "
+        "doctors!appointments_doctor_id_fkey(consultation_fee, users!doctors_user_id_fkey(full_name))"
+    ).in_("status", ["waiting", "in_progress"]).order("created_at", desc=True).execute()
+    return getattr(response, "data", []) if response else []
+
+def get_billing_details(appointment_id: str) -> dict:
+    """Fetch consultation, prescriptions, and items for billing."""
+    client = get_supabase_admin_client()
+    
+    # 1. Get consultation
+    consultation_res = client.table("consultations").select("*").eq("appointment_id", appointment_id).maybe_single().execute()
+    consultation = getattr(consultation_res, "data", None) if consultation_res else None
+    
+    prescriptions = []
+    if consultation:
+        rx_res = client.table("prescriptions").select(
+            "*, prescription_items(*)"
+        ).eq("consultation_id", consultation["id"]).execute()
+        prescriptions = getattr(rx_res, "data", []) if rx_res else []
+        
+        # Manually fetch medicine details for items
+        medicine_ids = []
+        for rx in prescriptions:
+            for item in rx.get("prescription_items", []):
+                if item.get("medicine_id"):
+                    medicine_ids.append(item["medicine_id"])
+                    
+        if medicine_ids:
+            med_res = client.table("medicines").select("*").in_("id", medicine_ids).execute()
+            medicines_dict = {m["id"]: m for m in getattr(med_res, "data", [])}
+            for rx in prescriptions:
+                for item in rx.get("prescription_items", []):
+                    item["medicine"] = medicines_dict.get(item.get("medicine_id"), {})
+                    
+    return {
+        "consultation": consultation,
+        "prescriptions": prescriptions
+    }
 
 
 # ╔══════════════════════════════════════════════════════════╗

@@ -129,6 +129,10 @@ def render_intake_chat(patient: dict):
         div[data-testid="stAudio"] {
             display: none !important;
         }
+        /* Hide JSON/code blocks in chat */
+        [data-testid="stChatMessage"] pre, [data-testid="stChatMessage"] code {
+            display: none !important;
+        }
         </style>
         """, unsafe_allow_html=True)
 

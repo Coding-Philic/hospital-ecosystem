@@ -25,10 +25,10 @@ VALID_TRANSITIONS = {
     "registered": ["triaged", "queued", "discharged"],  # Can skip triage if walk-in
     "triaged": ["queued", "discharged"],
     "queued": ["in_consultation", "discharged", "registered"],  # Can go back if cancelled
-    "in_consultation": ["investigation_ordered", "prescribed", "discharged"],
+    "in_consultation": ["investigation_ordered", "prescribed", "billing", "discharged"],
     "investigation_ordered": ["investigation_complete"],
     "investigation_complete": ["in_consultation", "prescribed"],  # Back to doctor with results
-    "prescribed": ["at_pharmacy", "discharged"],  # Can discharge if no pharmacy needed
+    "prescribed": ["at_pharmacy", "dispensed", "billing", "discharged"],  # Can discharge if no pharmacy needed
     "at_pharmacy": ["dispensed"],
     "dispensed": ["billing", "discharged"],
     "billing": ["discharged"],
@@ -108,9 +108,9 @@ def transition_state(
         if new_state in appointment_status_map:
             appt_update = {"status": appointment_status_map[new_state]}
             if new_state == "in_consultation":
-                appt_update["consultation_start_time"] = datetime.now().isoformat()
+                appt_update["consultation_start_time"] = datetime.now().astimezone().isoformat()
             elif new_state == "discharged":
-                appt_update["consultation_end_time"] = datetime.now().isoformat()
+                appt_update["consultation_end_time"] = datetime.now().astimezone().isoformat()
             db.update_appointment(appointment_id, appt_update)
 
         # Create audit entry

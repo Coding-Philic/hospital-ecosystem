@@ -118,8 +118,10 @@ if active_tab == "Prescription Queue":
                                 st.success("Prescription dispensed.")
                                 # Workflow transition
                                 try:
+                                    consultation_info = rx.get("consultations", {}) or {}
+                                    appointment_id = consultation_info.get("appointment_id", "")
                                     transition_state(
-                                        rx.get("consultation_id", ""),
+                                        appointment_id,
                                         rx["patient_id"],
                                         "dispensed",
                                         profile["id"], "pharmacist",
