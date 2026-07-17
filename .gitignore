@@ -60,6 +60,9 @@ Architecture.md
 PROJECT_DETAILS.md
 PROJECT_INSTRUCTIONS.md
 
-# Test and scratch scripts
+# Scratch and Test Scripts
+scratch_*.py
 test_*.py
 backfill_*.py
+setup_database.sql
+test.m4a

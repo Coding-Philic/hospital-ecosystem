@@ -88,6 +88,29 @@ def get_navbar_css():
         /* ------------------------------------------- */
         /* TAB BUTTONS STYLING */
         /* ------------------------------------------- */
+        /* ------------------------------------------- */
+        /* TWO-ROW LAYOUT FIXES (SCROLLABLE TABS)      */
+        /* ------------------------------------------- */
+        div[data-testid="stVerticalBlock"]:has(> div.element-container .desktop-nav-hook) > div[data-testid="stHorizontalBlock"]:nth-of-type(2),
+        div[data-testid="stVerticalBlock"]:has(> div.element-container .tablet-nav-hook) > div[data-testid="stHorizontalBlock"]:nth-of-type(2) {
+            flex-wrap: nowrap !important;
+            justify-content: flex-start !important;
+            overflow-x: auto !important;
+            scrollbar-width: none;
+            padding-bottom: 2px !important;
+            gap: 6px !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(> div.element-container .desktop-nav-hook) > div[data-testid="stHorizontalBlock"]:nth-of-type(2)::-webkit-scrollbar,
+        div[data-testid="stVerticalBlock"]:has(> div.element-container .tablet-nav-hook) > div[data-testid="stHorizontalBlock"]:nth-of-type(2)::-webkit-scrollbar {
+            display: none;
+        }
+        div[data-testid="stVerticalBlock"]:has(> div.element-container .desktop-nav-hook) > div[data-testid="stHorizontalBlock"]:nth-of-type(2) > div[data-testid="column"],
+        div[data-testid="stVerticalBlock"]:has(> div.element-container .tablet-nav-hook) > div[data-testid="stHorizontalBlock"]:nth-of-type(2) > div[data-testid="column"] {
+            width: auto !important;
+            flex: 0 0 auto !important;
+            min-width: min-content !important;
+        }
+
         /* Inactive Secondary Tab Button */
         div[data-testid="stVerticalBlock"]:has(> div.element-container .nav-hook) button[kind="secondary"] {
             background-color: transparent !important;
@@ -291,29 +314,29 @@ def render_navbar():
     desktop_container = st.container()
     with desktop_container:
         st.markdown('<span class="nav-hook desktop-nav-hook"></span>', unsafe_allow_html=True)
-        brand_col, tabs_col, actions_col = st.columns([1.5, 5.5, 3.0])
+        d_brand_col, d_actions_col = st.columns([3, 7])
 
-        with brand_col:
-            st.markdown('<h3 style="color: #007B8A; margin:0; padding-top:2px; white-space:nowrap; font-weight: 800; font-size: 1.3rem; letter-spacing: -0.5px;">MediFlow <span style="color:#3A9AD9">AI</span></h3>', unsafe_allow_html=True)
+        with d_brand_col:
+            st.markdown('<h3 style="color: #007B8A; margin:0; padding-top:4px; font-weight: 800; font-size: 1.3rem; letter-spacing: -0.5px;">MediFlow <span style="color:#3A9AD9">AI</span></h3>', unsafe_allow_html=True)
 
-        with tabs_col:
-            tab_cols = st.columns(len(tabs))
-            for i, tab in enumerate(tabs):
-                with tab_cols[i]:
-                    btn_type = "primary" if st.session_state.active_tab == tab else "secondary"
-                    if st.button(tab, key=f"d_tab_{tab}", use_container_width=True, type=btn_type):
-                        st.session_state.active_tab = tab
-                        st.rerun()
-
-        with actions_col:
-            p_col1, p_col2, p_col3 = st.columns([4.5, 2.3, 3.2])
-            with p_col1:
+        with d_actions_col:
+            dp_col0, dp_col1, dp_col2, dp_col3 = st.columns([2, 4.5, 1.5, 2])
+            with dp_col1:
                 st.markdown(profile_html, unsafe_allow_html=True)
-            with p_col2:
+            with dp_col2:
                 if st.button("Refresh", key="d_ref", help="Refresh data"):
                     st.rerun()
-            with p_col3:
+            with dp_col3:
                 render_logout_button(key="d_logout")
+
+        st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+        d_tab_cols = st.columns(len(tabs))
+        for i, tab in enumerate(tabs):
+            with d_tab_cols[i]:
+                btn_type = "primary" if st.session_state.active_tab == tab else "secondary"
+                if st.button(tab, key=f"d_tab_{tab}", use_container_width=True, type=btn_type):
+                    st.session_state.active_tab = tab
+                    st.rerun()
 
 
     # ==========================================
