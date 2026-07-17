@@ -251,7 +251,7 @@ elif active_tab == "Inventory":
                 new_med_name = st.text_input("Medicine Name", value=st.session_state.ai_med_name)
                 new_generic = st.text_input("Generic Name", value=st.session_state.ai_med_generic)
                 new_category = st.text_input("Category", placeholder="e.g., Antibiotic", value=st.session_state.ai_med_category)
-                new_use_case = st.text_input("Use Case (Optional)", placeholder="What is this used for?", value=st.session_state.ai_med_use_case)
+                new_use_case = st.text_area("Use Case (Optional)", placeholder="What is this used for?", value=st.session_state.ai_med_use_case, height=100)
             with acol2:
                 form_options = ["Tablet", "Capsule", "Syrup", "Injection", "Inhaler", "Gel", "Drops", "Powder", "Ointment", "Suspension"]
                 default_idx = form_options.index(st.session_state.ai_med_form) if st.session_state.ai_med_form in form_options else 0
