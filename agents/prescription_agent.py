@@ -16,7 +16,7 @@ from utils.helpers import generate_prescription_id
 logger = logging.getLogger(__name__)
 
 
-PRESCRIPTION_VALIDATION_PROMPT = """You are MediFlow AI's Prescription Validation Assistant. Your role is to review a doctor's prescription for completeness and potential issues.
+PRESCRIPTION_VALIDATION_PROMPT = """You are MediFlow AI's Prescription Validation Assistant. Your role is to review a doctor's prescription for completeness, potential issues, and stock availability.
 
 PRESCRIPTION ITEMS:
 {prescription_items}
@@ -26,20 +26,24 @@ PATIENT INFO:
 - Chronic Conditions: {chronic_conditions}
 - Current Medications: {current_meds}
 
+AVAILABLE PHARMACY INVENTORY:
+{inventory_list}
+
 Review each prescription item and check for:
-1. Reasonable dosage for the given medicine
-2. Potential drug interactions between prescribed medicines
-3. Allergy conflicts with patient's known allergies
-4. Contraindications with chronic conditions
-5. Completeness of instructions
+1. Reasonable dosage and correct route of administration for the given medicine (e.g., do not inhale an oral tablet).
+2. Potential drug interactions between prescribed medicines.
+3. Allergy conflicts with patient's known allergies.
+4. Contraindications with chronic conditions.
+5. Completeness of instructions.
+6. Stock availability: If a prescribed medication is out of stock (Stock: 0), you MUST add a warning about this in the "warnings" array to prevent the prescription from proceeding. Also, actively search the AVAILABLE PHARMACY INVENTORY and recommend a suitable, in-stock alternative in the "suggestions" array.
 
 Respond ONLY with valid JSON:
 {{
     "is_valid": true,
-    "warnings": ["list of any warnings or concerns"],
+    "warnings": ["list of any warnings, dosage errors, inappropriate routes, OR out of stock medicines"],
     "interactions": ["list of any potential drug interactions"],
     "allergy_alerts": ["list of any allergy-related concerns"],
-    "suggestions": ["list of any improvement suggestions"]
+    "suggestions": ["list of any improvement suggestions, INCLUDING specific alternative medicines from the inventory if needed"]
 }}"""
 
 
@@ -96,10 +100,24 @@ def process_prescription(
                 "instructions": item.get("instructions", ""),
             })
 
-        # AI validation (non-blocking — prescription goes through even if AI fails)
+        # AI validation (Blocking — Prescription is rejected if there are warnings)
         validation_result = _validate_prescription_ai(
             matched_items, patient_allergies, patient_conditions
         )
+        
+        has_critical_errors = (
+            len(validation_result.get("warnings", [])) > 0 or
+            len(validation_result.get("interactions", [])) > 0 or
+            len(validation_result.get("allergy_alerts", [])) > 0
+        )
+        
+        if has_critical_errors:
+            logger.warning(f"Prescription rejected by AI validation for patient {patient_id}")
+            return {
+                "success": False, 
+                "message": "AI validation failed. Please review the warnings.",
+                "validation": validation_result
+            }
 
         # Create prescription in database
         prescription_data = {
@@ -177,12 +195,26 @@ def _validate_prescription_ai(
             f"- {item['medicine_name']} {item['dosage']} | {item['frequency']} | {item['duration']} | Route: {item['route']}"
             for item in items
         )
+        
+        # Fetch current pharmacy inventory for suggestions
+        try:
+            inventory = db.get_pharmacy_inventory()
+            inventory_text = "\n".join(
+                f"- {i.get('medicines', {}).get('name', 'Unknown')} ({i.get('medicines', {}).get('category', 'N/A')}) - Stock: {i.get('quantity_available', 0)}"
+                for i in inventory
+            )
+            if not inventory_text:
+                inventory_text = "No inventory data available."
+        except Exception as e:
+            logger.error(f"Failed to fetch inventory for validation: {e}")
+            inventory_text = "Inventory check failed."
 
         system_prompt = PRESCRIPTION_VALIDATION_PROMPT.format(
             prescription_items=items_text,
             allergies=", ".join(allergies) if allergies else "None known",
             chronic_conditions=", ".join(conditions) if conditions else "None known",
             current_meds="Not available",
+            inventory_list=inventory_text,
         )
 
         response = llm_client.invoke_json(system_prompt, "Please validate this prescription.")
@@ -231,5 +263,75 @@ def send_to_pharmacy(prescription_id: str) -> dict:
         return {"success": True, "message": "Prescription sent to pharmacy."}
 
     except Exception as e:
-        logger.error(f"Error sending prescription to pharmacy: {e}")
+        logger.error(f"Error sending to pharmacy: {e}")
         return {"success": False, "message": f"Error: {str(e)}"}
+
+
+def generate_prescription_from_consult(consult_data: dict) -> list:
+    """
+    Generate a prescription automatically based on the doctor's consultation report.
+    Picks medications strictly from the available pharmacy inventory.
+    """
+    try:
+        # Fetch current pharmacy inventory for suggestions
+        try:
+            inventory = db.get_pharmacy_inventory()
+            inventory_text = "\n".join(
+                f"- {i.get('medicines', {}).get('name', 'Unknown')} ({i.get('medicines', {}).get('category', 'N/A')}) - Stock: {i.get('quantity_available', 0)}"
+                for i in inventory if i.get('quantity_available', 0) > 0
+            )
+            if not inventory_text:
+                inventory_text = "No inventory data available."
+        except Exception as e:
+            logger.error(f"Failed to fetch inventory for generation: {e}")
+            inventory_text = "Inventory check failed."
+            
+        system_prompt = f"""You are MediFlow AI's Clinical Pharmacologist.
+Based on the following doctor's consultation report, generate a complete prescription.
+
+CONSULTATION DETAILS:
+- Symptoms: {consult_data.get('symptoms', 'None')}
+- Diagnosis: {consult_data.get('diagnosis', 'None')}
+- Examination Notes: {consult_data.get('examination_notes', 'None')}
+- Additional Notes: {consult_data.get('additional_notes', 'None')}
+
+AVAILABLE PHARMACY INVENTORY (You MUST strictly choose from these medicines ONLY):
+{inventory_text}
+
+INSTRUCTIONS:
+Generate a list of prescribed medications. Ensure that:
+- You ONLY pick medicines that are IN STOCK in the inventory above.
+- Dosages, routes, frequencies, and durations are clinically appropriate.
+
+Respond ONLY with valid JSON in this exact format:
+{{
+    "prescription_items": [
+        {{
+            "medicine_name": "Exact Name from Inventory",
+            "dosage": "e.g., 500mg",
+            "frequency": "Once daily (OD)", 
+            "duration": "5 days",
+            "route": "Oral",
+            "quantity": 10,
+            "instructions": "Take after meals"
+        }}
+    ]
+}}
+Note: For frequency, use one of: ["Once daily (OD)", "Twice daily (BD)", "Three times daily (TDS)", "Four times daily (QDS)", "As needed (PRN)", "Immediately (STAT)"]
+Note: For route, use one of: ["Oral", "Intravenous", "Intramuscular", "Subcutaneous", "Topical", "Inhalation", "Drops", "Other"]
+"""
+        llm_client = get_llm_client()
+        response = llm_client.invoke_json(system_prompt, "Generate prescription items based on consultation.")
+        
+        response = response.strip()
+        if response.startswith("```"):
+            response = response.split("\n", 1)[1]
+            if response.endswith("```"):
+                response = response[:-3]
+            response = response.strip()
+            
+        result = json.loads(response)
+        return result.get("prescription_items", [])
+    except Exception as e:
+        logger.error(f"Failed to generate prescription from consult: {e}")
+        return []

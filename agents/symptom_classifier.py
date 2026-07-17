@@ -180,3 +180,64 @@ def classify_symptoms(
             "red_flags_detected": [],
             "suggested_investigations": [],
         }
+
+
+def generate_clinical_notes_from_triage(triage_summary: str, vitals: dict, patient_info: dict) -> dict:
+    """
+    Generate initial clinical notes (Symptoms, Exam, Diagnosis, Additional Notes) 
+    based on the triage summary, vitals, and patient history.
+    """
+    try:
+        system_prompt = f"""You are MediFlow AI's Clinical Assistant. Your job is to draft the doctor's consultation notes based on the patient's triage report, vitals, and history.
+
+PATIENT INFO:
+- Age: {patient_info.get('users', {}).get('age', 'Unknown')}
+- Gender: {patient_info.get('users', {}).get('gender', 'Unknown')}
+- Allergies: {', '.join(patient_info.get('allergies') or []) or 'None'}
+- Chronic Conditions: {', '.join(patient_info.get('chronic_conditions') or []) or 'None'}
+
+VITALS:
+- BP: {vitals.get('bp', 'Not recorded')}
+- Temp: {vitals.get('temperature', 'Not recorded')}
+- Pulse: {vitals.get('pulse', 'Not recorded')}
+- SpO2: {vitals.get('spo2', 'Not recorded')}
+- Weight: {vitals.get('weight', 'Not recorded')}
+
+TRIAGE SUMMARY / CHIEF COMPLAINT:
+{triage_summary}
+
+INSTRUCTIONS:
+Generate a draft of the clinical notes.
+1. "symptoms": Summarize the chief complaint clearly and concisely in medical terms.
+2. "examination_notes": Propose standard examination notes that the doctor would typically write for these symptoms (e.g., "Patient appears in mild distress. Oropharynx clear. Chest clear to auscultation."). Leave placeholders like [Examine X] if physical exam is strictly necessary.
+3. "diagnosis": Propose a provisional diagnosis based heavily on the symptoms. Use standard medical terminology.
+4. "additional_notes": Any warnings based on vitals or chronic conditions, or suggestions for lab tests.
+
+Respond ONLY with valid JSON in this exact format:
+{{
+    "symptoms": "...",
+    "examination_notes": "...",
+    "diagnosis": "...",
+    "additional_notes": "..."
+}}"""
+        from agents.llm_client import get_llm_client
+        llm_client = get_llm_client()
+        response = llm_client.invoke_json(system_prompt, "Generate clinical notes draft.")
+        
+        response = response.strip()
+        if response.startswith("```"):
+            response = response.split("\n", 1)[1]
+            if response.endswith("```"):
+                response = response[:-3]
+            response = response.strip()
+            
+        result = json.loads(response)
+        return {
+            "symptoms": result.get("symptoms", ""),
+            "examination_notes": result.get("examination_notes", ""),
+            "diagnosis": result.get("diagnosis", ""),
+            "additional_notes": result.get("additional_notes", "")
+        }
+    except Exception as e:
+        logger.error(f"Failed to generate clinical notes: {e}")
+        return {}

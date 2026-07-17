@@ -92,6 +92,7 @@
     };
 
     let isPlaying = false;
+    let isProcessing = false;
     let recognition = null;
     let lastAudioB64 = null;
     let hasInitialized = false;
@@ -113,12 +114,14 @@
         recognition = new webkitSpeechRecognition();
         recognition.continuous = true; // Keep listening until we manually stop it
         recognition.interimResults = true; // Get words as they are spoken
-        recognition.lang = 'hi-IN'; // Hindi
+        recognition.lang = 'en-IN'; // Set to Indian English to capture Hinglish/Hindi in Latin text
         
         setOrbState('listening', 'Listening...');
         let finalTranscript = '';
         
         recognition.onresult = function(e) {
+          if (isProcessing) return; // Prevent duplicate triggers if already sending to AI
+          
           clearTimeout(silenceTimer);
           
           let interimTranscript = '';
@@ -141,7 +144,8 @@
           silenceTimer = setTimeout(() => {
               let fullText = (finalTranscript + interimTranscript).trim();
               if (fullText.length > 0) {
-                  setOrbState('processing', 'Sending to AI...');
+                  isProcessing = true;
+                  setOrbState('processing', 'Thinking...');
                   recognition.stop();
                   Streamlit.setComponentValue(fullText);
               }
@@ -207,6 +211,7 @@
       if (data.audio_b64 && data.audio_b64 !== lastAudioB64) {
         lastAudioB64 = data.audio_b64;
         isPlaying = true;
+        isProcessing = false; // Reset processing flag so user can speak again!
         if (recognition) { recognition.stop(); }
         
         setOrbState('speaking', '');

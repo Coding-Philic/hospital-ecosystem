@@ -183,7 +183,15 @@ elif active_tab == "Inventory":
             col1, col2, col3, col4 = st.columns([3, 1, 1, 2])
             with col1:
                 st.markdown(f"**{med_name}** | {med.get('strength', '')}")
-                st.caption(f"{med.get('category', '')} | {med.get('dosage_form', '')}")
+                
+                # Parse category and use case
+                raw_category = med.get('category', '')
+                if " | Use Case: " in raw_category:
+                    cat_part, use_case_part = raw_category.split(" | Use Case: ", 1)
+                    st.caption(f"{cat_part} | {med.get('dosage_form', '')}")
+                    st.markdown(f"<span style='color: #6BCBEB; font-size: 0.85rem;'>Use Case: {use_case_part}</span>", unsafe_allow_html=True)
+                else:
+                    st.caption(f"{raw_category} | {med.get('dosage_form', '')}")
             with col2:
                 st.markdown(f"<span style='color:{color};font-weight:700;'>{qty}</span>", unsafe_allow_html=True)
                 st.caption("Available")
@@ -202,30 +210,73 @@ elif active_tab == "Inventory":
     except Exception as e:
         st.error(f"Error loading inventory: {e}")
 
+    if "ai_med_generic" not in st.session_state:
+        st.session_state.ai_med_generic = ""
+        st.session_state.ai_med_category = ""
+        st.session_state.ai_med_use_case = ""
+        st.session_state.ai_med_strength = ""
+        st.session_state.ai_med_price = 10.0
+        st.session_state.ai_med_form = "Tablet"
+        st.session_state.ai_med_name = ""
+
     # Add new medicine
     with st.expander("Add New Medicine to Catalog"):
+        st.markdown("##### 🪄 Auto-Fill with AI")
+        col_search, col_btn = st.columns([3, 1])
+        with col_search:
+            search_name = st.text_input("Enter medicine name to auto-fill", key="ai_search_input")
+        with col_btn:
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("✨ Auto-Fill", use_container_width=True):
+                if search_name:
+                    with st.spinner("Fetching details..."):
+                        from agents.pharmacy_agent import generate_medicine_details
+                        info = generate_medicine_details(search_name)
+                        if info:
+                            st.session_state.ai_med_name = search_name
+                            st.session_state.ai_med_generic = info.get("generic_name", "")
+                            st.session_state.ai_med_category = info.get("category", "")
+                            st.session_state.ai_med_use_case = info.get("use_case", "")
+                            st.session_state.ai_med_strength = info.get("strength", "")
+                            st.session_state.ai_med_form = info.get("dosage_form", "Tablet")
+                            st.session_state.ai_med_price = info.get("estimated_price", 10.0)
+                            st.rerun()
+
+        st.markdown("---")
         with st.form("add_medicine_form"):
             acol1, acol2 = st.columns(2)
             with acol1:
-                new_med_name = st.text_input("Medicine Name")
-                new_generic = st.text_input("Generic Name")
-                new_category = st.text_input("Category", placeholder="e.g., Antibiotic")
+                new_med_name = st.text_input("Medicine Name", value=st.session_state.ai_med_name)
+                new_generic = st.text_input("Generic Name", value=st.session_state.ai_med_generic)
+                new_category = st.text_input("Category", placeholder="e.g., Antibiotic", value=st.session_state.ai_med_category)
+                new_use_case = st.text_input("Use Case (Optional)", placeholder="What is this used for?", value=st.session_state.ai_med_use_case)
             with acol2:
-                new_form = st.selectbox("Dosage Form", ["Tablet", "Capsule", "Syrup", "Injection", "Inhaler", "Gel", "Drops", "Powder"])
-                new_strength = st.text_input("Strength", placeholder="e.g., 500mg")
-                new_price = st.number_input("Unit Price (₹)", min_value=0.0, value=10.0)
+                form_options = ["Tablet", "Capsule", "Syrup", "Injection", "Inhaler", "Gel", "Drops", "Powder", "Ointment", "Suspension"]
+                default_idx = form_options.index(st.session_state.ai_med_form) if st.session_state.ai_med_form in form_options else 0
+                new_form = st.selectbox("Dosage Form", form_options, index=default_idx)
+                new_strength = st.text_input("Strength", placeholder="e.g., 500mg", value=st.session_state.ai_med_strength)
+                new_price = st.number_input("Unit Price (₹)", min_value=0.0, value=float(st.session_state.ai_med_price))
 
             if st.form_submit_button("Add Medicine", use_container_width=True):
                 if new_med_name:
+                    final_category = f"{new_category} | Use Case: {new_use_case}" if new_use_case.strip() else new_category
                     db.create_medicine({
                         "name": new_med_name,
                         "generic_name": new_generic,
-                        "category": new_category,
+                        "category": final_category,
                         "dosage_form": new_form,
                         "strength": new_strength,
                         "unit_price": new_price,
                     })
-                    st.success(f"{new_med_name} added.")
+                    # Reset state
+                    st.session_state.ai_med_name = ""
+                    st.session_state.ai_med_generic = ""
+                    st.session_state.ai_med_category = ""
+                    st.session_state.ai_med_use_case = ""
+                    st.session_state.ai_med_strength = ""
+                    st.session_state.ai_med_price = 10.0
+                    st.session_state.ai_med_form = "Tablet"
+                    st.success(f"{new_med_name} added to catalog.")
                     st.rerun()
 
 

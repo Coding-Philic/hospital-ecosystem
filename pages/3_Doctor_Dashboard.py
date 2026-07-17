@@ -186,6 +186,14 @@ elif active_tab == "Consultation":
             # Check for existing consultation
             existing_consult = db.get_consultation_by_appointment(appt["id"])
 
+            # Handle AI generated notes safely before widget instantiation
+            if "temp_ai_notes" in st.session_state:
+                ai_notes = st.session_state.pop("temp_ai_notes")
+                st.session_state.consult_symptoms = ai_notes.get("symptoms", "")
+                st.session_state.consult_exam = ai_notes.get("examination_notes", "")
+                st.session_state.consult_diagnosis = ai_notes.get("diagnosis", "")
+                st.session_state.consult_additional = ai_notes.get("additional_notes", "")
+
             with st.form("consultation_form"):
                 st.markdown("##### Vitals")
                 vcol1, vcol2, vcol3 = st.columns(3)
@@ -220,13 +228,29 @@ elif active_tab == "Consultation":
                 follow_notes = st.text_input("Follow-up Instructions", key="consult_followup_notes",
                                             value=existing_consult.get("follow_up_notes", "") if existing_consult else "")
 
-                if st.form_submit_button("Save Consultation", use_container_width=True, type="primary"):
-                    vitals = {
-                        "bp": bp, "temperature": temp, "pulse": pulse,
-                        "spo2": spo2, "weight": weight, "height": height,
-                    }
-                    vitals = {k: v for k, v in vitals.items() if v}
+                col_sub1, col_sub2 = st.columns(2)
+                with col_sub1:
+                    save_clicked = st.form_submit_button("Save Consultation", use_container_width=True, type="primary")
+                with col_sub2:
+                    auto_fill_clicked = st.form_submit_button("✨ AI Auto-Fill Clinical Notes", use_container_width=True)
 
+                vitals = {
+                    "bp": bp, "temperature": temp, "pulse": pulse,
+                    "spo2": spo2, "weight": weight, "height": height,
+                }
+                vitals = {k: v for k, v in vitals.items() if v}
+
+                if auto_fill_clicked:
+                    with st.spinner("AI is generating clinical notes..."):
+                        from agents.symptom_classifier import generate_clinical_notes_from_triage
+                        notes = generate_clinical_notes_from_triage(triage_summary, vitals, p_info)
+                        if notes:
+                            st.session_state.temp_ai_notes = notes
+                            st.rerun()
+                        else:
+                            st.error("AI Generation failed! Please check your API key and connection.")
+
+                if save_clicked:
                     consult_data = {
                         "appointment_id": appt["id"],
                         "patient_id": appt["patient_id"],
@@ -309,18 +333,9 @@ elif active_tab == "Prescribe":
 
                     if rx_result.get("success"):
                         st.success(f"{rx_result.get('message', 'Prescription created!')}")
-
-                        # Show validation results
-                        validation = rx_result.get("validation", {})
-                        if validation.get("warnings"):
-                            for w in validation["warnings"]:
-                                st.warning(f"Warning: {w}")
-                        if validation.get("interactions"):
-                            for i in validation["interactions"]:
-                                st.error(f"Drug Interaction: {i}")
-                        if validation.get("allergy_alerts"):
-                            for a in validation["allergy_alerts"]:
-                                st.error(f"Allergy Alert: {a}")
+                        
+                        # Clear form only on success
+                        st.session_state.prescription_items = []
 
                         # Pharmacy results
                         if pharmacy_result:
@@ -339,7 +354,22 @@ elif active_tab == "Prescribe":
                         except Exception:
                             pass
                     else:
-                        st.error(f"Failed: {rx_result.get('message', 'Failed to create prescription.')}")
+                        st.error("Prescription rejected by AI validation. Please correct the errors below and resubmit.")
+                        
+                        # Show validation results as errors
+                        validation = rx_result.get("validation", {})
+                        if validation.get("warnings"):
+                            for w in validation["warnings"]:
+                                st.error(f"Dosage/Route Error: {w}")
+                        if validation.get("interactions"):
+                            for i in validation["interactions"]:
+                                st.error(f"Drug Interaction: {i}")
+                        if validation.get("allergy_alerts"):
+                            for a in validation["allergy_alerts"]:
+                                st.error(f"Allergy Alert: {a}")
+                        if validation.get("suggestions"):
+                            for s in validation["suggestions"]:
+                                st.info(f"AI Suggestion: {s}")
 
                     if result.get("messages"):
                         with st.expander("AI Agent Log"):
@@ -351,6 +381,7 @@ elif active_tab == "Prescribe":
                     patient_id=appt["patient_id"],
                     doctor_id=doctor["id"],
                     on_submit=handle_prescription_submit,
+                    consult_data=consult,
                 )
 
     except Exception as e:
@@ -363,8 +394,13 @@ elif active_tab == "Prescribe":
 elif active_tab == "Patient History":
     st.markdown("### Patient History Lookup")
 
-    search = st.text_input("Search patient by ID or name", placeholder="MF-XXXXXXXX")
-    if search:
+    col_s1, col_s2 = st.columns([4, 1])
+    with col_s1:
+        search = st.text_input("Search patient by ID or name", placeholder="MF-XXXXXXXX", label_visibility="collapsed")
+    with col_s2:
+        search_btn = st.button("Search", use_container_width=True)
+
+    if search or search_btn:
         try:
             patients = db.search_patients(search)
             for p in patients:
@@ -375,8 +411,16 @@ elif active_tab == "Patient History":
 
                     consults = db.get_consultations_by_patient(p["id"])
                     if consults:
+                        st.markdown("##### Consultation History")
                         for c in consults[:5]:
-                            st.markdown(f"- **{c.get('created_at', 'N/A')[:10]}**: {c.get('diagnosis', 'No diagnosis')}")
+                            doc_name = c.get('doctors', {}).get('users', {}).get('full_name', 'Unknown Doctor')
+                            date_str = c.get('created_at', 'N/A')[:10]
+                            with st.expander(f"{date_str} - Dr. {doc_name} ({c.get('diagnosis', 'No diagnosis')})"):
+                                st.markdown(f"**Symptoms:** {c.get('symptoms', 'None recorded')}")
+                                st.markdown(f"**Examination Notes:** {c.get('examination_notes', 'None recorded')}")
+                                st.markdown(f"**Diagnosis:** {c.get('diagnosis', 'None recorded')}")
+                                if c.get('additional_notes'):
+                                    st.markdown(f"**Additional Notes:** {c.get('additional_notes')}")
                     else:
                         st.caption("No consultation history.")
         except Exception as e:

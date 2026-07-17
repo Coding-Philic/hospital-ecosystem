@@ -8,8 +8,8 @@ Supports model fallback chain for when Groq rate limits are reached.
 import os
 from dotenv import load_dotenv
 
-# Load .env file
-load_dotenv()
+# Load .env file with override=True so changes take effect immediately without restarting the server
+load_dotenv(override=True)
 
 
 class Config:

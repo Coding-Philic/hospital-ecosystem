@@ -180,8 +180,17 @@ def search_patients(search_term: str) -> list:
     client = get_supabase_admin_client()
     response = client.table("patients").select(
         "*, users!patients_user_id_fkey(full_name, email, phone)"
-    ).or_(f"patient_id_code.ilike.%{search_term}%").execute()
-    return getattr(response, "data", []) if response else []
+    ).order("created_at", desc=True).execute()
+    
+    patients = getattr(response, "data", []) if response else []
+    
+    if search_term:
+        term = search_term.lower()
+        patients = [p for p in patients if 
+                    term in p.get("patient_id_code", "").lower() or 
+                    term in p.get("users", {}).get("full_name", "").lower()]
+                    
+    return patients
 
 
 # ╔══════════════════════════════════════════════════════════╗
@@ -291,10 +300,16 @@ def get_consultation_by_appointment(appointment_id: str) -> dict:
 def get_consultations_by_patient(patient_id: str) -> list:
     """Fetch all consultations for a patient."""
     client = get_supabase_admin_client()
-    response = client.table("consultations").select(
-        "*, doctors!consultations_doctor_id_fkey(users!doctors_user_id_fkey(full_name))"
-    ).eq("patient_id", patient_id).order("created_at", desc=True).execute()
-    return getattr(response, "data", []) if response else []
+    try:
+        response = client.table("consultations").select(
+            "*, doctors!consultations_doctor_id_fkey(users!doctors_user_id_fkey(full_name))"
+        ).eq("patient_id", patient_id).order("created_at", desc=True).execute()
+        return getattr(response, "data", []) if response else []
+    except Exception as e:
+        # Fallback if the strict foreign key string fails
+        print(f"Consultation join failed: {e}")
+        response = client.table("consultations").select("*").eq("patient_id", patient_id).order("created_at", desc=True).execute()
+        return getattr(response, "data", []) if response else []
 
 
 def update_consultation(consultation_id: str, data: dict) -> dict:

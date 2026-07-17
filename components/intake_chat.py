@@ -26,7 +26,20 @@ def text_to_speech_auto(text: str) -> bytes:
         tts = gTTS(text, lang=lang)
         tts.write_to_fp(fp)
         return fp.getvalue()
+    except ImportError:
+        import streamlit as st
+        with open("tts_error_log.txt", "w") as f:
+            f.write("ImportError: gTTS not installed\n")
+        st.session_state.tts_error = "gTTS library is not installed."
+        return None
     except Exception as e:
+        import traceback
+        with open("tts_error_log.txt", "w") as f:
+            f.write(f"TTS Error: {e}\n")
+            traceback.print_exc(file=f)
+        traceback.print_exc()
+        import streamlit as st
+        st.session_state.tts_error = f"TTS Error: {e}"
         return None
 
 
@@ -156,10 +169,13 @@ def render_intake_chat(patient: dict):
 
         # Render the custom pulsing orb component
         b64_audio = None
+        render_timestamp = None
         if st.session_state.latest_tts:
             b64_audio = base64.b64encode(st.session_state.latest_tts).decode("utf-8")
+            import time
+            render_timestamp = str(time.time())
             
-        transcript = continuous_voice(audio_b64=b64_audio, key="continuous_voice_comp")
+        transcript = continuous_voice(audio_b64=b64_audio, timestamp=render_timestamp, key="continuous_voice_comp")
             
         st.markdown("<div class='voice-text-container'>", unsafe_allow_html=True)
         # Show the most recent user text or AI streaming text
@@ -175,6 +191,10 @@ def render_intake_chat(patient: dict):
             st.session_state.last_transcript = transcript
             new_user_content = transcript
             st.session_state.latest_tts = None
+            
+        if st.session_state.get("tts_error"):
+            st.error(st.session_state.tts_error)
+            st.session_state.tts_error = None
             
     else:
         st.markdown("### AI Triage Nurse")

@@ -332,3 +332,34 @@ def approve_substitute(
     except Exception as e:
         logger.error(f"Error approving substitute: {e}")
         return {"success": False, "message": f"Error: {str(e)}"}
+
+
+def generate_medicine_details(medicine_name: str) -> dict:
+    """Use AI to automatically fill in standard details for a medication."""
+    try:
+        llm_client = get_llm_client()
+        system_prompt = f"""You are a clinical pharmacist AI. Provide standard catalog details for the following medication.
+MEDICATION: {medicine_name}
+
+Respond ONLY with valid JSON:
+{{
+    "generic_name": "Generic Name",
+    "category": "e.g., Antibiotic, Analgesic",
+    "use_case": "Brief 3-5 word description of what it treats",
+    "dosage_form": "Tablet|Capsule|Syrup|Injection|Inhaler|Gel|Drops|Powder|Ointment|Suspension",
+    "strength": "e.g., 500mg, 10ml",
+    "estimated_price": 10.0
+}}"""
+        response = llm_client.invoke_json(system_prompt, "Generate medicine details")
+        
+        response = response.strip()
+        if response.startswith("```"):
+            response = response.split("\n", 1)[1]
+            if response.endswith("```"):
+                response = response[:-3]
+            response = response.strip()
+            
+        return json.loads(response)
+    except Exception as e:
+        logger.error(f"Error generating medicine details: {e}")
+        return {}
