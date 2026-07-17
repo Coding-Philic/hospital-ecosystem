@@ -157,10 +157,8 @@ def render_intake_chat(patient: dict):
                 st.session_state.voice_greeting_played = False
                 st.rerun()
 
-        # Automatic greeting
+        # Automatic greeting (Disabled as per request)
         if not st.session_state.voice_greeting_played:
-            greeting = st.session_state.intake_messages[0]["content"]
-            st.session_state.latest_tts = greeting
             st.session_state.voice_greeting_played = True
 
         st.markdown("<div style='height: 5vh;'></div>", unsafe_allow_html=True)

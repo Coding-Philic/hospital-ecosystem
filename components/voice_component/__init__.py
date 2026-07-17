@@ -10,5 +10,5 @@ def continuous_voice(text_to_speak=None, timestamp=None, key=None):
     Plays the text_to_speak (AI's voice) using browser TTS if provided, then automatically starts listening.
     Returns the recognized transcript when the user finishes speaking.
     """
-    # Cache busted again!
+    # Cache busted!
     return _component_func(text_to_speak=text_to_speak, timestamp=timestamp, key=key, default=None)
