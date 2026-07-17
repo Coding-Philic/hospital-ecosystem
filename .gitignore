@@ -59,3 +59,7 @@ Rules.md
 Architecture.md
 PROJECT_DETAILS.md
 PROJECT_INSTRUCTIONS.md
+
+# Test and scratch scripts
+test_*.py
+backfill_*.py
