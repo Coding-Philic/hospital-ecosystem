@@ -234,12 +234,14 @@ elif active_tab == "Inventory":
                         info = generate_medicine_details(search_name)
                         if info:
                             st.session_state.ai_med_name = search_name
-                            st.session_state.ai_med_generic = info.get("generic_name", "")
-                            st.session_state.ai_med_category = info.get("category", "")
-                            st.session_state.ai_med_use_case = info.get("use_case", "")
-                            st.session_state.ai_med_strength = info.get("strength", "")
-                            st.session_state.ai_med_form = info.get("dosage_form", "Tablet")
-                            st.session_state.ai_med_price = info.get("estimated_price", 10.0)
+                            st.session_state.ai_med_generic = info.get("generic_name") or ""
+                            st.session_state.ai_med_category = info.get("category") or ""
+                            st.session_state.ai_med_use_case = info.get("use_case") or ""
+                            st.session_state.ai_med_strength = info.get("strength") or ""
+                            st.session_state.ai_med_form = info.get("dosage_form") or "Tablet"
+                            
+                            price = info.get("estimated_price")
+                            st.session_state.ai_med_price = float(price) if price is not None else 10.0
                             st.rerun()
 
         st.markdown("---")
