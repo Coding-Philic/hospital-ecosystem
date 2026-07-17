@@ -160,22 +160,20 @@ def render_intake_chat(patient: dict):
         # Automatic greeting
         if not st.session_state.voice_greeting_played:
             greeting = st.session_state.intake_messages[0]["content"]
-            tts_audio = text_to_speech_auto(greeting)
-            if tts_audio:
-                st.session_state.latest_tts = tts_audio
+            st.session_state.latest_tts = greeting
             st.session_state.voice_greeting_played = True
 
         st.markdown("<div style='height: 5vh;'></div>", unsafe_allow_html=True)
 
         # Render the custom pulsing orb component
-        b64_audio = None
+        text_payload = None
         render_timestamp = None
         if st.session_state.latest_tts:
-            b64_audio = base64.b64encode(st.session_state.latest_tts).decode("utf-8")
+            text_payload = st.session_state.latest_tts
             import time
             render_timestamp = str(time.time())
             
-        transcript = continuous_voice(audio_b64=b64_audio, timestamp=render_timestamp, key="continuous_voice_comp")
+        transcript = continuous_voice(text_to_speak=text_payload, timestamp=render_timestamp, key="continuous_voice_comp")
             
         st.markdown("<div class='voice-text-container'>", unsafe_allow_html=True)
         # Show the most recent user text or AI streaming text
@@ -321,11 +319,9 @@ def render_intake_chat(patient: dict):
                 
         st.session_state.intake_messages.append({"role": "assistant", "content": full_response})
 
-        # Generate TTS after streaming finishes if in voice mode
+        # Pass text to client TTS after streaming finishes if in voice mode
         if st.session_state.voice_mode:
-            tts_audio = text_to_speech_auto(full_response)
-            if tts_audio:
-                st.session_state.latest_tts = tts_audio
+            st.session_state.latest_tts = full_response
 
         # Check for completion
         completion_data = parse_intake_completion(full_response)

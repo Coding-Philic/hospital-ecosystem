@@ -1,107 +1,144 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <style>
     body {
-        margin: 0;
-        padding: 0;
-        background-color: #0f172a;
-        color: white;
-        font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #0f172a;
+      color: white;
+      font-family: sans-serif;
     }
+
     .orb-container {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        height: 300px;
-        background-color: transparent;
-        cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 300px;
+      background-color: transparent;
+      cursor: pointer;
     }
+
     .orb {
-        width: 120px;
-        height: 120px;
-        border-radius: 50%;
-        background: radial-gradient(circle, #6BCBEB 0%, #007B8A 70%, #005F6B 100%);
-        box-shadow: 0 0 30px rgba(0, 123, 138, 0.5);
-        transition: all 0.3s ease-in-out;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #6BCBEB 0%, #007B8A 70%, #005F6B 100%);
+      box-shadow: 0 0 30px rgba(0, 123, 138, 0.5);
+      transition: all 0.3s ease-in-out;
     }
+
     .orb.listening {
-        animation: pulse 2s infinite;
+      animation: pulse 2s infinite;
     }
+
     .orb.speaking {
-        animation: speak 0.6s infinite alternate;
+      animation: speak 0.6s infinite alternate;
     }
+
     .orb.processing {
-        animation: spin 1s infinite linear;
-        border-top: 4px solid #fff;
-        background: transparent;
-        box-shadow: none;
+      animation: spin 1s infinite linear;
+      border-top: 4px solid #fff;
+      background: transparent;
+      box-shadow: none;
     }
+
     @keyframes pulse {
-        0% { transform: scale(1); box-shadow: 0 0 30px rgba(0, 123, 138, 0.5); }
-        50% { transform: scale(1.15); box-shadow: 0 0 60px rgba(107, 203, 235, 0.8); }
-        100% { transform: scale(1); box-shadow: 0 0 30px rgba(0, 123, 138, 0.5); }
+      0% {
+        transform: scale(1);
+        box-shadow: 0 0 30px rgba(0, 123, 138, 0.5);
+      }
+
+      50% {
+        transform: scale(1.15);
+        box-shadow: 0 0 60px rgba(107, 203, 235, 0.8);
+      }
+
+      100% {
+        transform: scale(1);
+        box-shadow: 0 0 30px rgba(0, 123, 138, 0.5);
+      }
     }
+
     @keyframes speak {
-        0% { transform: scale(1); }
-        100% { transform: scale(1.2); }
+      0% {
+        transform: scale(1);
+      }
+
+      100% {
+        transform: scale(1.2);
+      }
     }
+
     @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
     }
+
     .status-text {
-        text-align: center;
-        color: #94a3b8;
-        font-size: 16px;
-        margin-top: 30px;
-        height: 20px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 16px;
+      margin-top: 30px;
+      height: 20px;
     }
   </style>
   <script>
     function sendMessageToStreamlitClient(type, data) {
-        const outData = Object.assign({
-            isStreamlitMessage: true,
-            type: type,
-        }, data);
-        window.parent.postMessage(outData, "*");
+      const outData = Object.assign({
+        isStreamlitMessage: true,
+        type: type,
+      }, data);
+      window.parent.postMessage(outData, "*");
     }
 
     const Streamlit = {
-        setComponentReady: function() {
-            sendMessageToStreamlitClient("streamlit:componentReady", {apiVersion: 1});
-        },
-        setFrameHeight: function(height) {
-            sendMessageToStreamlitClient("streamlit:setFrameHeight", {height: height});
-        },
-        setComponentValue: function(value) {
-            sendMessageToStreamlitClient("streamlit:setComponentValue", {value: value});
-        },
-        RENDER_EVENT: "streamlit:render",
-        events: {
-            addEventListener: function(type, callback) {
-                window.addEventListener("message", function(event) {
-                    if (event.data.type === type) {
-                        event.detail = event.data;
-                        callback(event);
-                    }
-                });
+      setComponentReady: function () {
+        sendMessageToStreamlitClient("streamlit:componentReady", { apiVersion: 1 });
+      },
+      setFrameHeight: function (height) {
+        sendMessageToStreamlitClient("streamlit:setFrameHeight", { height: height });
+      },
+      setComponentValue: function (value) {
+        sendMessageToStreamlitClient("streamlit:setComponentValue", { value: value });
+      },
+      RENDER_EVENT: "streamlit:render",
+      events: {
+        addEventListener: function (type, callback) {
+          window.addEventListener("message", function (event) {
+            if (event.data.type === type) {
+              event.detail = event.data;
+              callback(event);
             }
+          });
         }
+      }
     };
 
     let isPlaying = false;
     let isProcessing = false;
     let recognition = null;
-    let lastAudioB64 = null;
+    let lastTextToSpeak = null;
     let hasInitialized = false;
 
+    // Load voices proactively
+    let availableVoices = [];
+    window.speechSynthesis.onvoiceschanged = () => {
+        availableVoices = window.speechSynthesis.getVoices();
+    };
+
     function setOrbState(state, text) {
-        const orb = document.getElementById('orb');
-        const status = document.getElementById('status');
-        orb.className = 'orb ' + state;
-        status.innerText = text;
+      const orb = document.getElementById('orb');
+      const status = document.getElementById('status');
+      orb.className = 'orb ' + state;
+      status.innerText = text;
     }
 
     let silenceTimer = null;
@@ -110,20 +147,20 @@
       if ('webkitSpeechRecognition' in window) {
         if (recognition) { recognition.stop(); }
         clearTimeout(silenceTimer);
-        
+
         recognition = new webkitSpeechRecognition();
         recognition.continuous = true; // Keep listening until we manually stop it
         recognition.interimResults = true; // Get words as they are spoken
         recognition.lang = 'en-IN'; // Set to Indian English to capture Hinglish/Hindi in Latin text
-        
+
         setOrbState('listening', 'Listening...');
         let finalTranscript = '';
-        
-        recognition.onresult = function(e) {
+
+        recognition.onresult = function (e) {
           if (isProcessing) return; // Prevent duplicate triggers if already sending to AI
-          
+
           clearTimeout(silenceTimer);
-          
+
           let interimTranscript = '';
           for (let i = e.resultIndex; i < e.results.length; ++i) {
             if (e.results[i].isFinal) {
@@ -132,50 +169,50 @@
               interimTranscript += e.results[i][0].transcript;
             }
           }
-          
+
           let currentText = (finalTranscript + interimTranscript).trim();
-          
+
           // Display what it hears so the user knows the mic works!
           if (currentText.length > 0) {
-              setOrbState('listening', '"' + currentText + '"');
+            setOrbState('listening', '"' + currentText + '"');
           }
-          
+
           // User asked for 1-second silence threshold to stop recording
           silenceTimer = setTimeout(() => {
-              let fullText = (finalTranscript + interimTranscript).trim();
-              if (fullText.length > 0) {
-                  isProcessing = true;
-                  setOrbState('processing', 'Thinking...');
-                  recognition.stop();
-                  Streamlit.setComponentValue(fullText);
-              }
+            let fullText = (finalTranscript + interimTranscript).trim();
+            if (fullText.length > 0) {
+              isProcessing = true;
+              setOrbState('processing', 'Thinking...');
+              recognition.stop();
+              Streamlit.setComponentValue(fullText);
+            }
           }, 1200); // 1.2 second pause threshold
         };
-        
-        recognition.onerror = function(e) {
+
+        recognition.onerror = function (e) {
           if (e.error === 'no-speech') {
-             // Just restart silently if no speech
-             if (!isPlaying) {
-                 try { recognition.stop(); recognition.start(); } catch(err) {}
-             }
+            // Just restart silently if no speech
+            if (!isPlaying) {
+              try { recognition.stop(); recognition.start(); } catch (err) { }
+            }
           } else if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-             setOrbState('', 'Mic blocked by browser. Tap orb to allow.');
+            setOrbState('', 'Mic blocked by browser. Tap orb to allow.');
           } else {
-             setOrbState('', 'Mic Error (' + e.error + '). Tap orb to retry.');
+            setOrbState('', 'Mic Error (' + e.error + '). Tap orb to retry.');
           }
         };
 
-        recognition.onend = function() {
+        recognition.onend = function () {
           // If we haven't triggered a submission and we aren't playing audio, keep listening
           if (!isPlaying && document.getElementById('status').innerText.includes("Listening")) {
-              try { recognition.start(); } catch(err) {}
+            try { recognition.start(); } catch (err) { }
           }
         }
-        
+
         try {
-            recognition.start();
-        } catch(err) {
-            setOrbState('', 'Tap orb to start listening.');
+          recognition.start();
+        } catch (err) {
+          setOrbState('', 'Tap orb to start listening.');
         }
       } else {
         setOrbState('', "Browser doesn't support speech recognition.");
@@ -183,51 +220,108 @@
     }
 
     function requestMicPermission() {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            setOrbState('processing', 'Requesting Mic Access...');
-            navigator.mediaDevices.getUserMedia({ audio: true })
-            .then(function(stream) {
-                stream.getTracks().forEach(t => t.stop());
-                startListening(true);
-            })
-            .catch(function(err) {
-                setOrbState('', 'Mic denied. Please allow it in your URL bar and tap orb.');
-            });
-        } else {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        setOrbState('processing', 'Requesting Mic Access...');
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(function (stream) {
+            stream.getTracks().forEach(t => t.stop());
             startListening(true);
-        }
+          })
+          .catch(function (err) {
+            setOrbState('', 'Mic denied. Please allow it in your URL bar and tap orb.');
+          });
+      } else {
+        startListening(true);
+      }
     }
 
     function onOrbClick() {
-        if (!isPlaying) {
-            requestMicPermission();
-        }
+      if (!isPlaying) {
+        // Safari Audio Unlock: Must play a silent utterance on first user interaction
+        let unlockUtterance = new SpeechSynthesisUtterance('');
+        unlockUtterance.volume = 0;
+        window.speechSynthesis.speak(unlockUtterance);
+        requestMicPermission();
+      }
     }
 
     function onRender(event) {
       Streamlit.setFrameHeight(300);
       const data = event.detail.args;
-      
-      if (data.audio_b64 && data.audio_b64 !== lastAudioB64) {
-        lastAudioB64 = data.audio_b64;
+
+      if (data.text_to_speak && data.text_to_speak !== lastTextToSpeak) {
+        lastTextToSpeak = data.text_to_speak;
         isPlaying = true;
         isProcessing = false; // Reset processing flag so user can speak again!
         if (recognition) { recognition.stop(); }
-        
+
         setOrbState('speaking', '');
-        let audio = new Audio("data:audio/mp3;base64," + data.audio_b64);
-        audio.playbackRate = 1.25; // Increase AI speaking speed
         
-        audio.play().catch(e => {
-            console.error("Autoplay prevented:", e);
-            isPlaying = false;
-            requestMicPermission(); // Try to start listening directly
-        });
+        // Cancel any currently playing speech
+        window.speechSynthesis.cancel();
         
-        audio.onended = () => {
+        let utterance = new SpeechSynthesisUtterance(data.text_to_speak);
+        if (availableVoices.length === 0) {
+            availableVoices = window.speechSynthesis.getVoices();
+        }
+        
+        // Language Detection (Devanagari characters)
+        let isHindi = /[\u0900-\u097F]/.test(data.text_to_speak);
+        
+        // Advanced Voice Selection: Prioritize Cloud/Natural/Premium Voices strictly by language
+        let voice = null;
+        
+        if (isHindi) {
+            // 1. Premium Edge Natural Hindi
+            voice = availableVoices.find(v => v.name.includes("Natural") && v.lang.includes("hi-IN"));
+            // 2. Google Cloud Hindi
+            if (!voice) voice = availableVoices.find(v => v.name.includes("Google") && v.lang.includes("hi-IN"));
+            // 3. Apple Premium Hindi
+            if (!voice) voice = availableVoices.find(v => v.name === "Lekha");
+            // 4. Any Hindi
+            if (!voice) voice = availableVoices.find(v => v.lang.includes("hi-IN") || v.lang.includes("hi"));
+        } else {
+            // 1. Premium Edge Natural English
+            voice = availableVoices.find(v => v.name.includes("Natural") && (v.lang.includes("en-IN") || v.lang.includes("en-US") || v.lang.includes("en-GB")));
+            // 2. Google Cloud English
+            if (!voice) voice = availableVoices.find(v => (v.name.includes("Google") && v.name.includes("Female") && v.lang.includes("en")) || v.name === "Google US English" || v.name === "Google UK English Female");
+            // 3. Apple Premium English
+            if (!voice) voice = availableVoices.find(v => v.name === "Samantha" || v.name === "Rishi" || v.name === "Tessa");
+            // 4. Any English Female
+            if (!voice) voice = availableVoices.find(v => v.lang.includes("en") && v.name.includes("Female"));
+            // 5. Any Indian English
+            if (!voice) voice = availableVoices.find(v => v.lang.includes("en-IN"));
+            // 6. Any English
+            if (!voice) voice = availableVoices.find(v => v.lang.includes("en"));
+        }
+        
+        // 7. Absolute fallback
+        if (!voice) voice = availableVoices[0];
+
+        if (voice) {
+            utterance.voice = voice;
+        }
+        
+        // Fine-tune pitch and rate for a more human feel
+        utterance.rate = 1.05; 
+        utterance.pitch = 1.05; // Slightly higher pitch often sounds more friendly/female
+        
+        utterance.onend = () => {
           isPlaying = false;
           requestMicPermission(); // Request permissions and start
         };
+        
+        utterance.onerror = (e) => {
+          console.error("SpeechSynthesis error:", e);
+          isPlaying = false;
+          requestMicPermission();
+        };
+        
+        // Safari Bugfix: Delay speak() slightly after cancel()
+        setTimeout(() => {
+            window.speechSynthesis.speak(utterance);
+        }, 50);
+
       } else {
         if (!isPlaying && !hasInitialized) {
           hasInitialized = true;
@@ -236,16 +330,18 @@
       }
     }
 
-    window.onload = function() {
-        Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, onRender);
-        Streamlit.setComponentReady();
-    };
+    // Register synchronously, do not wait for window.onload
+    Streamlit.setComponentReady();
+    Streamlit.setFrameHeight(300);
+    Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, onRender);
   </script>
 </head>
+
 <body>
   <div class="orb-container" onclick="onOrbClick()">
     <div id="orb" class="orb"></div>
     <div id="status" class="status-text">Initializing...</div>
   </div>
 </body>
+
 </html>
