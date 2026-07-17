@@ -345,7 +345,7 @@ Respond ONLY with valid JSON:
 {{
     "generic_name": "Generic Name",
     "category": "e.g., Antibiotic, Analgesic",
-    "use_case": "Brief 3-5 word description of what it treats",
+    "use_case": "A detailed medical description of what this medication is used for, including primary indications and typical mechanisms of action. (1-3 sentences)",
     "dosage_form": "Tablet|Capsule|Syrup|Injection|Inhaler|Gel|Drops|Powder|Ointment|Suspension",
     "strength": "e.g., 500mg, 10ml",
     "estimated_price": 10.0

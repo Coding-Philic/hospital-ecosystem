@@ -347,10 +347,24 @@ def get_medicine_by_id(medicine_id: str) -> dict:
 
 
 def create_medicine(data: dict) -> dict:
-    """Add a new medicine to the catalog."""
+    """Add a new medicine to the catalog and initialize its inventory."""
     client = get_supabase_admin_client()
     response = client.table("medicines").insert(data).execute()
-    return getattr(response, "data", None) if response else None
+    meds = getattr(response, "data", None)
+    if meds and len(meds) > 0:
+        new_med = meds[0]
+        # Auto-initialize inventory record so it appears in Pharmacy Dashboard
+        inv_data = {
+            "medicine_id": new_med["id"],
+            "quantity_available": 0,
+            "reorder_level": 10,
+            "selling_price": data.get("unit_price", 10.0),
+            "batch_number": "BATCH-NEW",
+            "expiry_date": "2027-12-31"
+        }
+        client.table("pharmacy_inventory").insert(inv_data).execute()
+        return new_med
+    return None
 
 
 # ╔══════════════════════════════════════════════════════════╗
