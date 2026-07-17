@@ -55,6 +55,18 @@ def render_prescription_form(consultation_id: str, patient_id: str, doctor_id: s
     if "rx_frequency_input" not in st.session_state:
         st.session_state.rx_frequency_input = "Once daily (OD)"
 
+    if st.session_state.pop("clear_rx_form", False):
+        st.session_state.rx_medicine_sel = "-- Select or type --" if medicine_names else ""
+        st.session_state.rx_medicine_custom = ""
+        st.session_state.rx_medicine_name_input = ""
+        st.session_state.rx_dosage_input = ""
+        st.session_state.rx_duration_val_input = 5
+        st.session_state.rx_duration_unit_input = "days"
+        st.session_state.rx_quantity_input = 10
+        st.session_state.rx_instructions_input = ""
+        st.session_state.rx_route_input = "Oral"
+        st.session_state.rx_frequency_input = "Once daily (OD)"
+        
     if st.session_state.pop("rx_scroll_top", False):
         st.components.v1.html("<script>window.parent.document.querySelector('.main').scrollTo(0, 0);</script>", height=0)
 
@@ -152,17 +164,8 @@ def render_prescription_form(consultation_id: str, patient_id: str, doctor_id: s
                     st.session_state.prescription_items.append(item)
                     st.success(f"Added: {medicine_name} {dosage}")
                 
-                # Clear state
-                st.session_state.rx_medicine_sel = "-- Select or type --" if medicine_names else ""
-                st.session_state.rx_medicine_custom = ""
-                st.session_state.rx_medicine_name_input = ""
-                st.session_state.rx_dosage_input = ""
-                st.session_state.rx_duration_val_input = 5
-                st.session_state.rx_duration_unit_input = "days"
-                st.session_state.rx_quantity_input = 10
-                st.session_state.rx_instructions_input = ""
-                st.session_state.rx_route_input = "Oral"
-                st.session_state.rx_frequency_input = "Once daily (OD)"
+                # Clear state on rerun
+                st.session_state.clear_rx_form = True
                 
                 st.rerun()
             else:
